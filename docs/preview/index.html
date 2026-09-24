@@ -1,0 +1,1902 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>nvs.ide Workbench</title>
+<style>
+:root{
+  color-scheme:dark;
+  --void:#05070a;--crypt:#0a0e14;--crypt-hi:#111823;
+  --stone:#1a2430;--stone-hi:#26333f;
+  --bone:#d8d4c4;--bone-dim:#8b8778;--ash:#5c6470;
+  --spectral:#62e670;--spectral-hi:#c8ffd0;
+  --corpse:#4fb8d6;--necrotic:#9d6bd8;--viscera:#b8453a;--gold:#d4a843;
+  --mono:"BigBlueTerm437 Nerd Font Mono","BigBlueTerm","Lucida Console",Consolas,ui-monospace,monospace;
+  --hi:var(--stone-hi);--lo:var(--void);
+}
+*{box-sizing:border-box;border-radius:0!important}
+[hidden]{display:none!important}
+html,body{background:var(--crypt);color:var(--bone);font-family:var(--mono);font-size:14px;line-height:1.55}
+.page{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:44px}
+a{color:var(--corpse)}
+h1,h2,h3,h4{font-weight:normal;margin:0;text-wrap:balance}
+p{margin:0;max-width:74ch}
+code,kbd{font-family:var(--mono)}
+kbd{display:inline-block;padding:0 6px;background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);font-size:12px;color:var(--bone)}
+:focus-visible{outline:2px dotted var(--spectral);outline-offset:1px}
+
+.hdr{display:grid;gap:12px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim)}
+.hdr h1{font-size:44px;line-height:1;color:var(--spectral);letter-spacing:.02em}
+.hdr h1 small{font-size:14px;color:var(--bone-dim);letter-spacing:0;margin-left:12px;vertical-align:middle}
+.hdr .lede{font-size:16px}
+.hdr .lede b{color:var(--spectral-hi);font-weight:normal}
+
+.btn{font:inherit;font-size:12px;color:var(--bone);background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);padding:1px 8px;cursor:pointer;line-height:18px;white-space:nowrap}
+.btn:active,.btn.on{border-color:var(--lo) var(--hi) var(--hi) var(--lo);background:var(--crypt-hi)}
+.btn.on{color:var(--spectral)}
+.btn[disabled]{color:var(--ash);cursor:not-allowed}
+.btn.go{color:var(--void);background:var(--spectral)}
+input.field,select.field{font:inherit;font-size:12px;color:var(--bone);background:var(--void);border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);padding:2px 6px;width:100%}
+input[type=checkbox],input[type=radio]{accent-color:var(--spectral)}
+
+.px{display:inline-block;position:relative;flex:none;vertical-align:middle}
+.px b{position:absolute;left:0;top:0;display:block}
+
+/* ---------- window ---------- */
+.stage{overflow-x:auto;padding-bottom:4px}
+.win{min-width:980px;height:680px;display:grid;grid-template-rows:26px 1fr 22px;background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:4px 4px 0 var(--void);position:relative}
+.win:focus-within .titlebar{background:var(--crypt-hi)}
+.win:focus-within .titlebar .ttl{color:var(--bone)}
+.titlebar{display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;background:var(--stone);border-bottom:2px solid var(--void);font-size:12px;user-select:none}
+.titlebar .logo{color:var(--spectral)}
+.titlebar .ttl{flex:1;color:var(--bone-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.titlebar .palbtn{display:flex;align-items:center;gap:8px;min-width:300px;justify-content:space-between;color:var(--bone-dim);background:var(--void);border-color:var(--lo) var(--hi) var(--hi) var(--lo)}
+.wctl{display:flex;gap:2px}
+.wctl .btn{padding:0;width:20px;height:18px;display:grid;place-items:center}
+
+.body{display:grid;grid-template-columns:var(--abw,44px) var(--sbw,260px) 1fr;min-height:0}
+.body.nosb{--sbw:0px}.body.nosb .side{display:none}
+.body.noab{--abw:0px}.body.noab .act{display:none}
+.body.sbr{grid-template-columns:var(--abw,44px) 1fr var(--sbw,260px)}
+.body.sbr .side{order:3;border-right:0;border-left:2px solid var(--void)}
+.body.sbr .main{order:2}
+
+.act{background:var(--crypt);border-right:2px solid var(--void);display:flex;flex-direction:column;align-items:center;padding-top:6px;gap:4px}
+.act button{width:36px;height:36px;display:grid;place-items:center;background:none;border:2px solid transparent;color:var(--ash);cursor:pointer;position:relative}
+.act button:hover{color:var(--bone)}
+.act button.on{color:var(--spectral);border-color:var(--lo) var(--hi) var(--hi) var(--lo);background:var(--crypt-hi)}
+.act .sp{flex:1}
+.act .badge{position:absolute;right:0;bottom:0;background:var(--spectral);color:var(--void);font-size:10px;line-height:12px;padding:0 3px}
+
+.side{background:var(--crypt-hi);border-right:2px solid var(--void);display:flex;flex-direction:column;min-width:0;min-height:0;font-size:12px;outline:none}
+.side:focus-within{box-shadow:inset 0 2px 0 var(--necrotic)}
+.side h3{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:8px 10px 6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.side .scroll{overflow:auto;flex:1;min-height:0;padding-bottom:8px}
+.side .sec{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);padding:6px 10px 4px;border-top:2px solid var(--stone);margin-top:6px;display:flex;justify-content:space-between}
+.side .pad{padding:4px 10px;display:grid;gap:6px}
+.side .note{color:var(--ash);padding:4px 10px}
+.side .foot{border-top:2px solid var(--stone);padding:4px 10px;color:var(--ash);font-size:11px}
+.row{display:flex;align-items:center;gap:6px;padding:1px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px}
+.row:hover{background:var(--stone)}
+.row.on{background:var(--stone-hi);color:var(--spectral-hi)}
+.row.kf{box-shadow:inset 2px 0 0 var(--necrotic);background:var(--stone)}
+.row .dim{color:var(--ash);margin-left:auto;padding-left:8px}
+.row .tw{width:8px;color:var(--bone-dim);flex:none;text-align:center}
+.gs{margin-left:auto;font-size:11px;width:14px;text-align:center}
+.gs.M{color:var(--gold)}.gs.A{color:var(--spectral)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips .btn{font-size:11px;padding:0 6px}
+.prow{display:grid;grid-template-columns:24px 1fr auto;gap:0 8px;padding:6px 10px;border-bottom:1px solid var(--stone);cursor:pointer;align-items:start}
+.prow:hover{background:var(--stone)}
+.prow.kf{box-shadow:inset 2px 0 0 var(--necrotic);background:var(--stone)}
+.prow.on{background:var(--stone-hi)}
+.prow .ico{width:24px;height:24px;display:grid;place-items:center;background:var(--void)}
+.prow .nm{color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .ds{grid-column:2/4;color:var(--bone-dim);font-size:11px;line-height:1.4}
+.prow .eq{grid-column:2/4;color:var(--gold);font-size:11px}
+.tag{font-size:10px;padding:0 4px;border:1px solid currentColor;letter-spacing:.06em;white-space:nowrap}
+.tag.nvim{color:var(--spectral)}.tag.vsx{color:var(--corpse)}.tag.t1{color:var(--corpse)}.tag.t2{color:var(--gold)}.tag.t3{color:var(--ash)}.tag.lsp{color:var(--necrotic)}.tag.upd{color:var(--gold)}.tag.off{color:var(--ash)}
+.stagecard{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:6px 8px;background:var(--crypt);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);cursor:pointer;text-align:left;font:inherit;color:var(--bone-dim);font-size:11px}
+.stagecard b{font-weight:normal;color:var(--bone);font-size:12px}
+.stagecard .n{grid-row:1/3;font-size:20px;color:var(--ash);line-height:1}
+.stagecard.on{border-color:var(--lo) var(--hi) var(--hi) var(--lo);background:var(--stone)}
+.stagecard.on .n,.stagecard.on b{color:var(--spectral)}
+.skill{display:grid;grid-template-columns:1fr 60px 24px;gap:8px;align-items:center;padding:1px 10px}
+.skill .k{color:var(--bone)}
+.skill .bar{height:6px;background:var(--void)}
+.skill .bar i{display:block;height:6px;background:var(--spectral)}
+.skill .c{color:var(--ash);text-align:right;font-variant-numeric:tabular-nums}
+.skill.zero .k{color:var(--ash)}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+
+.main{display:grid;grid-template-rows:auto 1fr var(--ph,180px);min-width:0;min-height:0;background:var(--crypt);position:relative}
+.main.nopanel{--ph:0px}.main.nopanel .panel{display:none}
+.main.notabs .tabs{display:none}
+
+.tabs{display:flex;background:var(--stone);border-bottom:2px solid var(--void);min-height:28px;overflow:hidden}
+.tab{display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;font-size:12px;color:var(--bone-dim);border-right:2px solid var(--void);cursor:pointer;white-space:nowrap;background:var(--stone)}
+.tab.on{background:var(--crypt);color:var(--bone);box-shadow:inset 0 2px 0 var(--spectral)}
+.tab .x{width:16px;height:16px;display:grid;place-items:center;color:var(--ash);background:none;border:0;cursor:pointer}
+.tab .x:hover{color:var(--bone);background:var(--stone-hi)}
+.tab .dirty{width:6px;height:6px;background:var(--bone)}
+.tabs .fill{flex:1}
+.crumbs{font-size:11px;color:var(--bone-dim);padding:2px 12px;border-bottom:1px solid var(--stone);white-space:nowrap;overflow:hidden}
+.crumbs b{font-weight:normal;color:var(--bone)}
+
+.ed{display:grid;grid-template-rows:auto 1fr;min-height:0;position:relative}
+.edbody{display:grid;grid-template-columns:1fr auto;min-height:0}
+.code{overflow:auto;position:relative;font-size:var(--fs,13px);line-height:var(--lh,20px);cursor:text;outline:none}
+.lines{position:relative;padding-block:4px 40px;min-width:max-content}
+.ln{display:flex;white-space:pre;height:var(--lh,20px)}
+.ln.cl{background:var(--crypt-hi)}
+.ln.sel{background:color-mix(in srgb,var(--necrotic) 22%,transparent)}
+.ln.stop{background:color-mix(in srgb,var(--gold) 15%,transparent)}
+.sg{width:2ch;flex:none;display:grid;place-items:center;position:relative}
+.sg.gc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.nu{width:5ch;padding-right:1ch;flex:none;text-align:right;color:var(--ash)}
+.ln.cln .nu{color:var(--gold)}
+.tx{flex:none}
+.vt{color:var(--gold);opacity:.85;padding-left:3ch;display:flex;align-items:center;gap:6px}
+.vt.blame{color:var(--ash);opacity:1}
+.sq{display:inline-block;width:6px;height:6px;background:var(--gold)}
+.bp{display:block;width:8px;height:8px;background:var(--viscera)}
+.ws{font-style:normal;color:var(--gold);font-size:11px}
+.cur{position:absolute;height:var(--lh,20px);width:1ch;background:var(--spectral);color:var(--void);white-space:pre;pointer-events:none}
+.cur.bar{width:2px}
+.cur.vis{background:var(--necrotic)}
+.code:not(:focus) .cur:not(.bar){background:none;outline:1px solid var(--spectral);color:inherit}
+.k{color:var(--necrotic)}.s{color:var(--spectral-hi)}.c{color:var(--ash)}.f{color:var(--corpse)}.n{color:var(--gold)}.t{color:var(--gold)}.p{color:var(--bone-dim)}
+.hs{background:color-mix(in srgb,var(--gold) 35%,transparent)}
+
+.mm{width:72px;background:var(--crypt);border-left:1px solid var(--stone);padding:6px 4px;overflow:hidden}
+.mm i{display:block;height:2px;margin-bottom:1px;background:var(--stone-hi);max-width:64px}
+.mm i.mc{background:var(--stone)}.mm i.on{background:var(--spectral)}
+.nomm .mm{display:none}
+
+.welcome{display:grid;place-content:center;gap:10px;color:var(--bone-dim);text-align:center;font-size:12px}
+.welcome .big{font-size:28px;color:var(--stone-hi)}
+
+.msgs{position:absolute;right:84px;bottom:calc(var(--ph,180px) + 10px);display:grid;gap:4px;justify-items:end;pointer-events:none;z-index:6}
+.main.nopanel .msgs{bottom:10px}
+.msg{background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);padding:3px 10px;font-size:12px;max-width:470px;box-shadow:2px 2px 0 var(--void)}
+.msg.err{color:var(--viscera)}.msg.warn{color:var(--gold)}.msg.ok{color:var(--spectral)}
+.msg.coach{border-left:4px solid var(--necrotic);display:grid;gap:2px}
+.msg.coach small{font-size:10px;letter-spacing:.12em;color:var(--necrotic)}
+
+.wk{position:absolute;left:12px;right:12px;bottom:calc(var(--ph,180px) + 10px);background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:3px 3px 0 var(--void);padding:8px 10px;z-index:7;font-size:12px;display:grid;gap:6px}
+.main.nopanel .wk{bottom:10px}
+.wk .hd{color:var(--bone-dim);font-size:11px;letter-spacing:.08em;display:flex;justify-content:space-between}
+.wk .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 16px}
+.wk .grid span{white-space:nowrap}
+.wk .grid b{font-weight:normal;color:var(--spectral);display:inline-block;width:2ch}
+
+.panel{display:grid;grid-template-rows:26px 1fr;border-top:2px solid var(--stone-hi);min-height:0;background:var(--crypt)}
+.ptabs{display:flex;gap:2px;padding:0 8px;align-items:stretch;border-bottom:1px solid var(--stone)}
+.ptab{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone-dim);background:none;border:0;border-bottom:2px solid transparent;padding:0 8px;cursor:pointer}
+.ptab.on{color:var(--bone);border-bottom-color:var(--spectral)}
+.ptab .cnt{color:var(--void);background:var(--gold);padding:0 4px;margin-left:4px;letter-spacing:0}
+.ptabs .fill{flex:1}
+.pbody{overflow:auto;padding:6px 12px;font-size:12px;white-space:pre-wrap;outline:none}
+.pbody:focus{box-shadow:inset 0 2px 0 var(--necrotic)}
+.pbody .ok{color:var(--spectral)}.pbody .dim{color:var(--ash)}.pbody .warn{color:var(--gold)}.pbody .err{color:var(--viscera)}.pbody .inf{color:var(--corpse)}
+.prob{display:flex;gap:8px;cursor:pointer;padding:1px 4px;white-space:nowrap}
+.prob:hover{background:var(--stone)}
+.blink{animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+
+.status{display:flex;align-items:stretch;font-size:11px;background:var(--stone);border-top:2px solid var(--void);white-space:nowrap;overflow:hidden}
+.status > *{display:flex;align-items:center;padding:0 8px;border-right:1px solid var(--void)}
+.status .mode{font-weight:bold;letter-spacing:.08em;color:var(--void);min-width:78px;justify-content:center}
+.mode.NORMAL{background:var(--spectral)}.mode.INSERT{background:var(--corpse)}.mode.VISUAL{background:var(--necrotic)}.mode.EDIT{background:var(--bone-dim)}.mode.PANE{background:var(--gold)}
+.status .grow{flex:1;border-right:0;color:var(--bone-dim)}
+.status button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0 8px;display:flex;align-items:center;gap:4px;border-right:1px solid var(--void)}
+.status button:hover{background:var(--stone-hi)}
+.status .accent{color:var(--spectral)}.status .warn{color:var(--gold)}
+
+.pal{position:absolute;top:30px;left:50%;transform:translateX(-50%);width:620px;background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:4px 4px 0 var(--void);z-index:10;padding:6px;display:grid;gap:6px}
+.pal input{font-size:13px;padding:4px 8px}
+.pal ul{list-style:none;margin:0;padding:0;max-height:320px;overflow:auto;background:var(--crypt)}
+.pal li{display:flex;gap:10px;align-items:center;padding:3px 8px;font-size:12px;cursor:pointer}
+.pal li.on{background:var(--stone-hi);color:var(--spectral-hi)}
+.pal li .src{font-size:10px;padding:0 4px;border:1px solid currentColor;min-width:48px;text-align:center;letter-spacing:.06em;flex:none}
+.src.shell{color:var(--spectral)}.src.ex{color:var(--bone)}.src.lsp{color:var(--corpse)}.src.dap{color:var(--necrotic)}.src.plugin{color:var(--bone-dim)}.src.ext{color:var(--gold)}.src.file{color:var(--bone-dim)}.src.line{color:var(--gold)}
+.pal li .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pal li .kb{color:var(--ash);flex:none}
+.pal li .vk{color:var(--necrotic);flex:none;min-width:84px;text-align:right}
+.pal li mark{background:none;color:var(--spectral)}
+.pal .foot{font-size:11px;color:var(--ash);display:flex;justify-content:space-between;gap:12px}
+
+/* settings tab */
+.stab{display:grid;grid-template-rows:auto 1fr;min-height:0;outline:none}
+.sbar{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--stone);flex-wrap:wrap}
+.sbar input{flex:1;min-width:200px}
+.sgrid{display:grid;grid-template-columns:150px 1fr;min-height:0}
+.scats{border-right:1px solid var(--stone);overflow:auto;padding:6px 0;font-size:12px}
+.scats button{display:flex;justify-content:space-between;width:100%;font:inherit;font-size:12px;background:none;border:0;color:var(--bone-dim);padding:3px 12px;cursor:pointer;text-align:left}
+.scats button:hover{color:var(--bone);background:var(--stone)}
+.scats button.on{color:var(--spectral);background:var(--crypt-hi);box-shadow:inset 2px 0 0 var(--spectral)}
+.scats button .m{color:var(--gold)}
+.slist{overflow:auto;padding:4px 16px 24px;font-size:12px}
+.slist h4{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:10px 0 4px;border-bottom:1px solid var(--stone)}
+.set{display:grid;grid-template-columns:1fr 200px;gap:2px 16px;padding:8px 0 8px 10px;border-bottom:1px solid var(--stone);position:relative}
+.set.mod::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;background:var(--gold)}
+.set .l{color:var(--bone)}
+.set .l .id{color:var(--ash);font-size:10px;margin-left:6px}
+.set .d{color:var(--bone-dim);font-size:11px;line-height:1.4;grid-column:1}
+.set .ctl{grid-row:1/3;grid-column:2;display:flex;gap:6px;align-items:start;justify-content:flex-end}
+.set .ctl .field{max-width:200px}
+.set .vim{grid-column:1/3;font-size:11px;color:var(--ash);white-space:pre-wrap}
+.set .vim em{font-style:normal;color:var(--necrotic);margin-right:6px;letter-spacing:.06em;font-size:10px}
+.set.dis{opacity:.55}
+.report{margin:10px 0;padding:8px 10px;background:var(--crypt-hi);border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);display:grid;gap:4px;font-size:11px}
+.report b{font-weight:normal;color:var(--spectral)}
+.report .miss{color:var(--gold)}
+.ktab{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.ktab th,.ktab td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--stone);white-space:nowrap}
+.ktab th{font-weight:normal;color:var(--bone-dim);letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+.ktab td.v{color:var(--necrotic)}.ktab td.w{color:var(--spectral)}.ktab td.w.off{color:var(--ash)}
+
+/* plugin tab */
+.ptabv{overflow:auto;padding:14px 18px 30px;display:grid;gap:14px;align-content:start;font-size:12px;outline:none}
+.phd{display:grid;grid-template-columns:44px 1fr auto;gap:4px 12px;align-items:center}
+.phd .ico{width:44px;height:44px;display:grid;place-items:center;background:var(--void);grid-row:1/3}
+.phd .nm{font-size:18px;color:var(--bone)}
+.phd .id{color:var(--ash)}
+.phd .acts{grid-row:1/3;grid-column:3;display:flex;gap:6px}
+.pbox{display:grid;gap:6px}
+.pbox h4{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim)}
+.pbox p{color:var(--bone-dim);font-size:12px}
+.pbox .chips span{font-size:11px;padding:1px 6px;background:var(--stone);color:var(--bone)}
+.popt{display:grid;grid-template-columns:180px 1fr;gap:8px;align-items:center;max-width:520px}
+.popt label{color:var(--bone)}
+.popt .field{max-width:220px}
+pre.lua{margin:0;padding:10px;background:var(--void);font-size:12px;white-space:pre;overflow:auto;color:var(--bone)}
+.eqbox{padding:8px 10px;border-left:3px solid var(--gold);background:var(--crypt-hi);display:grid;gap:4px}
+.eqbox b{font-weight:normal;color:var(--gold)}
+
+.hints{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--bone-dim);margin-top:10px}
+.hints span{display:flex;gap:6px;align-items:center}
+
+/* write-up */
+.sect{display:grid;gap:14px}
+.sect h2{font-size:20px;color:var(--bone);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.sect h2 .tag2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--spectral)}
+.sect > p{color:var(--bone-dim)}
+.sect > p b{color:var(--bone);font-weight:normal}
+.tbl{overflow-x:auto}
+table.doc{border-collapse:collapse;width:100%;min-width:680px;font-size:13px;background:var(--crypt-hi)}
+table.doc th,table.doc td{text-align:left;vertical-align:top;padding:8px 10px;border:1px solid var(--stone)}
+table.doc th{font-weight:normal;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);background:var(--stone)}
+table.doc td:first-child{color:var(--bone);white-space:nowrap}
+table.doc td{color:var(--bone-dim)}
+table.doc td b{color:var(--spectral-hi);font-weight:normal}
+table.doc td.y{color:var(--spectral)}table.doc td.no{color:var(--ash)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.card{background:var(--crypt-hi);border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);padding:12px 14px;display:grid;gap:6px;align-content:start}
+.card h4{font-size:13px;color:var(--spectral)}
+.card p{font-size:12px;color:var(--bone-dim)}
+.card code{color:var(--necrotic)}
+
+.arch{display:grid;max-width:940px}
+.box{background:var(--stone);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);padding:12px 14px;display:grid;gap:6px;font-size:13px}
+.box h4{font-size:14px;color:var(--spectral)}
+.box p{color:var(--bone-dim);font-size:12px}
+.box ul{margin:0;padding-left:18px;color:var(--bone-dim);font-size:12px}
+.box.opt{background:var(--crypt-hi);border:2px dashed var(--stone-hi)}
+.box.opt h4{color:var(--gold)}
+.wires{display:grid;grid-template-columns:1fr 1fr;font-size:11px;color:var(--bone-dim)}
+.wires div{display:flex;flex-direction:column;align-items:center;padding:4px 0}
+.wires div::before{content:"";width:2px;height:18px;background:var(--spectral)}
+.wires div.dash::before{background:repeating-linear-gradient(var(--gold) 0 4px,transparent 4px 7px)}
+.lower{display:grid;grid-template-columns:1fr 120px 1fr}
+.link{display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:11px;color:var(--bone-dim);text-align:center;gap:4px}
+.link::before{content:"";width:100%;height:2px;background:repeating-linear-gradient(90deg,var(--gold) 0 4px,transparent 4px 7px)}
+.budgets{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.budget{background:var(--crypt-hi);border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);padding:12px 14px;display:grid;gap:4px}
+.budget .v{font-size:26px;color:var(--spectral);font-variant-numeric:tabular-nums}
+.budget .l{font-size:12px;color:var(--bone-dim)}
+ol.phases{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:ph -1}
+ol.phases li{counter-increment:ph;display:grid;grid-template-columns:90px 1fr;gap:12px;padding:10px 12px;background:var(--crypt-hi);border-left:2px solid var(--stone-hi);font-size:13px;color:var(--bone-dim)}
+ol.phases li::before{content:"PHASE " counter(ph);font-size:11px;letter-spacing:.1em;padding-top:2px}
+ol.phases li.now{border-left-color:var(--spectral)}
+ol.phases li.now::before{color:var(--spectral)}
+ol.phases b{color:var(--bone);font-weight:normal}
+ul.qs{margin:0;padding-left:18px;display:grid;gap:8px;color:var(--bone-dim);font-size:13px;max-width:90ch}
+ul.qs b{color:var(--gold);font-weight:normal}
+
+/* ask view */
+.askscroll{overflow:auto;flex:1;min-height:0;padding:6px 10px;display:grid;gap:8px;align-content:start}
+.aq{justify-self:end;max-width:90%;background:var(--stone);padding:4px 8px;color:var(--bone);border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo)}
+.aa{display:grid;gap:6px;padding:8px;background:var(--crypt);border-left:3px solid var(--spectral)}
+.aa.ai{border-left-color:var(--gold)}
+.aa b{font-weight:normal;color:var(--spectral-hi)}
+.aa p{color:var(--bone-dim);line-height:1.45;margin:0}
+.aa .dim{color:var(--ash)}
+.ak{display:grid;grid-template-columns:56px 1fr;gap:6px;align-items:baseline}
+.ak span{font-size:10px;letter-spacing:.1em;color:var(--ash);text-transform:uppercase}
+.ak code{color:var(--necrotic)}.ak code.vs{color:var(--bone)}
+/* completion */
+.cmp{position:absolute;z-index:4;display:flex;gap:2px;align-items:flex-start;font-size:12px;line-height:18px}
+.cmp ul{list-style:none;margin:0;padding:2px 0;background:var(--stone);border:1px solid var(--stone-hi);min-width:280px;box-shadow:2px 2px 0 var(--void)}
+.cmp li{display:flex;gap:8px;padding:0 8px;white-space:nowrap;cursor:pointer}
+.cmp li.on{background:var(--stone-hi);color:var(--spectral-hi)}
+.cmp .kd{width:14px;text-align:center;flex:none}
+.cmp .kd.f{color:var(--corpse)}.cmp .kd.v,.cmp .kd.t{color:var(--gold)}.cmp .kd.k{color:var(--necrotic)}.cmp .kd.s{color:var(--spectral)}.cmp .kd.w{color:var(--ash)}
+.cmp .sr{margin-left:auto;color:var(--ash);padding-left:12px}
+.cdoc{background:var(--crypt-hi);border:1px solid var(--stone-hi);padding:4px 8px;max-width:300px;white-space:normal;color:var(--bone-dim)}
+.cdoc b{color:var(--bone);font-weight:normal;display:block}
+.ghost{color:var(--ash);font-style:italic}
+.tk{display:block;width:8px;height:8px}.tk.ok{background:var(--spectral)}.tk.bad{background:var(--viscera)}
+.wel{display:grid;gap:14px;max-width:760px}
+.wel h2{font-size:22px;color:var(--spectral)}
+.wel p{color:var(--bone-dim)}
+.welgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tag.extra{color:var(--necrotic)}
+.prow .grp{grid-column:1/4;font-size:10px;letter-spacing:.1em;color:var(--ash);text-transform:uppercase;padding-top:6px}
+@media (max-width:640px){
+  .hdr h1{font-size:32px}
+  .lower{grid-template-columns:1fr}
+  .link{padding:8px 0}
+  .link::before{width:2px;height:18px}
+  .wires{grid-template-columns:1fr}
+  .wires div:last-child{display:none}
+  ol.phases li{grid-template-columns:1fr;gap:2px}
+}
+@media (prefers-reduced-motion:reduce){.blink{animation:none}}
+</style>
+
+<div class="page">
+  <header class="hdr">
+    <div class="eyebrow">Design proposal · third pass · working name</div>
+    <h1>nvs.ide <small>LazyVim with training wheels, for people leaving VS Code</small></h1>
+    <p class="lede">nvs.ide is the middle ground between VS Code and Neovim. Underneath it's <b>stock Neovim running the full LazyVim setup</b>. On top it adds the hand-holding VS Code users expect: familiar shortcuts that fade out over <b>four stages</b>, a coach that shows the Vim way, <b>Ask</b> for "how do I…" questions, built-in <b>lessons</b>, IntelliSense-style <b>completion</b>, and optional <b>local AI through Ollama</b>. Click into the editor below and try it. F1 opens Ask.</p>
+  </header>
+
+  <section>
+    <div class="stage">
+      <div class="win" id="win">
+        <div class="titlebar">
+          <span class="logo" id="logo"></span>
+          <span class="ttl" id="ttl"></span>
+          <button class="btn palbtn" id="palbtn" type="button"><span>Search commands, files, :ex, /text</span><span>Ctrl+Shift+P</span></button>
+          <span class="wctl"><span class="btn" id="wmin"></span><span class="btn" id="wmax"></span><span class="btn" id="wcls"></span></span>
+        </div>
+        <div class="body" id="body">
+          <nav class="act" id="act" aria-label="Views"></nav>
+          <aside class="side" id="side" tabindex="-1"></aside>
+          <div class="main" id="main">
+            <div class="tabs" id="tabs"></div>
+            <div class="ed" id="ed"></div>
+            <div class="panel" id="panel"></div>
+            <div class="msgs" id="msgs"></div>
+            <div class="wk" id="wk" hidden></div>
+          </div>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="pal" id="pal" hidden>
+          <input class="field" id="palin" autocomplete="off" spellcheck="false" aria-label="Command">
+          <ul id="pallist" role="listbox"></ul>
+          <div class="foot"><span id="palfoot"></span><span>Enter run · Esc close · Ctrl+J/K move</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="hints" id="hints"></div>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Runs today</span> The Neovim half already works</h2>
+    <p>The <b>runtime/</b> folder in the repo is a working editor now. It's LazyVim plus the nvs.ide layer (the four stages, the coach, Ask, the lessons and local AI), and it runs in Neovide as a separate app next to your own config. The window in this preview is the design for the native shell that comes next.</p>
+    <div class="grid2">
+      <div class="card"><h4>Try it</h4><p><code>scripts\try.ps1</code> links runtime/ as the <code>nvs-ide</code> app and starts Neovide with it. Your normal <code>nvim</code> config isn't touched.</p></div>
+      <div class="card"><h4>Tested</h4><p>A sandboxed LazyVim install passes 24 checks: commands, stage keymaps and restoring LazyVim's own, saved state, the lessons and their ✓ checks, and Ask's answers. Ghost text loads when local AI is on.</p></div>
+      <div class="card"><h4>Not yet</h4><p>The native window (Phase 1), the Settings screen and the Plugins view exist only in this preview. Ollama answers are untested against a live model.</p></div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Ask</span> Type a question, get the Vim way</h2>
+    <p>Press <b>F1</b> or <b>Space ?</b> and ask in plain words: "delete a line", "split the screen", "how do I exit vim". Ask matches the question against <b>written answers</b> for the common tasks. Each answer gives the Vim keys, the VS Code keys you already know, and a <b>Try it</b> button. Nothing is generated and nothing leaves your machine.</p>
+    <p>When nothing matches and <b>Local AI</b> is on, the question goes to your Ollama model along with the closest written answers, so the model stays grounded. If it suggests a <code>:</code> command, a Run button asks before running it. The preview and the editor read the same answers file, <code>runtime/kb/ask.json</code>.</p>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Completion</span> IntelliSense-style suggestions, plus local AI</h2>
+    <div class="grid2">
+      <div class="card"><h4>The menu</h4><p>blink.cmp (LazyVim's completion engine) shows suggestions from the language server, snippets and open files as you type, with documentation beside them. Enter accepts, Ctrl+Space opens it by hand. Try typing <code>vim.no</code> in the editor above.</p></div>
+      <div class="card"><h4>Ghost text</h4><p>With Local AI on, minuet-ai.nvim asks a small Ollama model for longer grey suggestions, like Copilot on your own hardware. <code>Alt+A</code> accepts. In the preview, turn on Settings &gt; Local AI, then type <code>vim.notify(</code>.</p></div>
+      <div class="card"><h4>Your models, your network</h4><p>The default address is <code>http://localhost:11434</code>. If Ollama runs on another machine, forward that port over SSH and leave the address alone. <code>:NvsOllama status</code> lists the models it can see.</p></div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Lessons</span> A built-in tutorial</h2>
+    <p><code>:NvsTutor</code> opens nine short lessons written for VS Code users: moving, modes, deleting, changing, copying, search and save, the leader key, code navigation and stages. It uses Neovim's own tutor engine, so exercise lines show a red mark until you get them right, then turn green. <code>:Tutor</code> is still there for the full Vim course.</p>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">The ramp</span> Four stages from VS Code to Neovim</h2>
+    <p>The <b>welcome screen</b> asks once where you're coming from and picks a stage. Change it later in Learn, in Settings &gt; Transition, or with <code>:NvsStage</code>. Stages only decide which keys nvs.ide handles before LazyVim sees them. Moving between them loses nothing, and LazyVim's own keys come back at Stage 4.</p>
+    <div class="tbl"><table class="doc">
+      <thead><tr><th>Stage</th><th>Files open in</th><th>VS Code shortcuts</th><th>Vim keys</th><th>Coach</th></tr></thead>
+      <tbody>
+        <tr><td>1 · VS Code keys</td><td>Insert mode; Esc stays there</td><td class="y">Ctrl+S, Z, /, P, F, B, Shift+K, Shift+F, Shift+P</td><td class="no">Only through Ctrl+\ Ctrl+N</td><td>On</td></tr>
+        <tr><td>2 · Hybrid</td><td>Insert mode</td><td class="y">Same set</td><td class="y">Esc gives Normal mode</td><td>On</td></tr>
+        <tr><td>3 · Modal with safety net</td><td>Normal mode</td><td class="y">Same set</td><td class="y">Everything</td><td>On</td></tr>
+        <tr><td>4 · Pure Neovim</td><td>Normal mode</td><td class="no">LazyVim's keys (Ctrl+/ is the terminal again)</td><td class="y">Everything</td><td class="no">Quiet</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Vim everywhere</span> Not just the text area</h2>
+    <div class="grid2">
+      <div class="card"><h4>Every list moves like Vim</h4><p>Explorer, search results, git changes, plugins and the palette use <code>j</code> <code>k</code> <code>gg</code> <code>G</code>. <code>l</code> or Enter opens, <code>h</code> collapses, <code>/</code> filters.</p></div>
+      <div class="card"><h4>Panes are windows</h4><p><code>Ctrl+H/J/K/L</code> (LazyVim's keys) or <code>Ctrl+W h/j/l</code> move between sidebar, editor and panel.</p></div>
+      <div class="card"><h4>Leader menu</h4><p>Space in Normal mode opens which-key: files, git, debug, plugins, settings, and <code>?</code> for Ask.</p></div>
+      <div class="card"><h4>Settings speak Vim</h4><p>Every setting shows the Lua or command it maps to. Search by Vim name (<code>rnu</code>), and <code>:set rnu!</code> flips the same checkbox.</p></div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Plugins</span> The whole of LazyVim, pre-installed</h2>
+    <p>nvs.ide ships the full LazyVim set: snacks.nvim (finder, explorer, terminal), blink.cmp, which-key, gitsigns, flash, trouble, conform, nvim-lint, grug-far, mason, bufferline and more. It also turns on the <b>harpoon</b> and <b>mini.surround</b> extras. Telescope is one click away as an extra; snacks' picker does the same jobs by default. The Plugins view adds tabs for <b>Extras</b> (the same list as <code>:LazyExtras</code>) and <b>Browse</b>. Searching for a VS Code extension you miss finds its Neovim equivalent.</p>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Architecture</span> Three processes, one optional</h2>
+    <div class="arch">
+      <div class="box">
+        <h4>nvs.ide shell (Phase 1)</h4>
+        <p>Rust, native window, GPU-rendered, forked from Neovide. It draws the chrome, Settings, Plugins, Ask and the coach. Neovim draws only the text.</p>
+      </div>
+      <div class="wires"><div>msgpack-RPC over stdio</div><div class="dash">JSON-RPC, started on demand</div></div>
+      <div class="lower">
+        <div class="box">
+          <h4>nvim --embed + runtime/</h4>
+          <p>Stock Neovim running LazyVim and the nvs.ide layer (working now).</p>
+          <ul><li>lua/nvs: stages, coach, ask, ollama, state</li><li>kb/ask.json, tutor/nvs-ide.tutor</li></ul>
+        </div>
+        <div class="link">providers proxied<br>as a virtual LSP server</div>
+        <div class="box opt">
+          <h4>extension host (optional)</h4>
+          <p>Node process with a subset of the <code>vscode</code> API, for Open VSX extensions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">Plan</span> Build order</h2>
+    <ol class="phases">
+      <li class="now"><span><b>Design and runtime.</b> This preview, and the working LazyVim-based runtime in the repo.</span></li>
+      <li><span><b>Shell MVP.</b> Fork Neovide into <code>shell/</code>. Workbench layout, native cmdline, popup menu and messages.</span></li>
+      <li><span><b>Panels.</b> Problems, Outline, Search, Git, Terminal and Debug fed by the bridge. Ask and the coach move into the window.</span></li>
+      <li><span><b>Settings and Plugins screens.</b> The settings schema writing Lua, VS Code import, and the lazy.nvim / LazyExtras front end.</span></li>
+      <li><span><b>Extension host.</b> Open VSX, Tier 1 conversion, then Tier 2 providers.</span></li>
+      <li><span><b>Packaging.</b> Windows first (scoop and an msi).</span></li>
+    </ol>
+  </section>
+
+  <section class="sect">
+    <h2><span class="tag2">For review</span> Open questions</h2>
+    <ul class="qs">
+      <li><b>License.</b> The repo has none yet, which means all rights reserved. Neovide and LazyVim use MIT and Apache-2.0, so either fits.</li>
+      <li><b>Repo visibility.</b> github.com/michael-slop/nvs.ide is private. One command makes it public when you're ready.</li>
+      <li><b>Default models.</b> Ask uses qwen2.5-coder:7b and ghost text uses qwen2.5-coder:1.5b. Swap them for whatever your Ollama box runs best.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(() => {
+/* ================= pixel icons ================= */
+const PX = {
+  explorer:["..#####...","..#...##..","..#....#..","#####..#..","#...##.#..","#....#.#..","#....#.#..","#....###..","#....#....","######...."],
+  search:[".####.....","#....#....","#....#....","#....#....","#....#....",".####.....",".....##...","......##..",".......##.","........##"],
+  git:[".##....##.",".##....##.","..#....#..","..#...#...","..#..#....","..#.#.....","..##......","..#.......",".##.......",".##......."],
+  debug:["#.........","##........","###.......","####......","#####.....","######....","#####.....","####......","###.......","##........"],
+  plugins:["####......","#..#.####.","####.#..#.",".....####.","####......","#..#.####.","####.#..#.",".....####.","..........",".........."],
+  ask:["..####....",".#....#...","......#...",".....#....","....#.....","....#.....","..........","....#.....","..........",".........."],
+  learn:["..........","####..####","#..#..#..#","#..####..#","#........#","#........#","#........#","##########","....##....",".........."],
+  settings:[".#...#..#.","###..#..#.",".#...#..#.",".#..###.#.",".#...#..#.",".#...#.###",".#...#..#.",".#...#..#.",".#...#..#.",".........."],
+  file:["#####...","#...##..","#....#..","#....#..","#....#..","#....#..","######.."],
+  folder:["###.....","#######.","#.....#.","#.....#.","#.....#.","#######."],
+  x:["#...#",".#.#.","..#..",".#.#.","#...#"],
+  min:[".....",".....",".....",".....","#####"],
+  max:["#####","#####","#...#","#...#","#####"],
+  logo:["#...#","##..#","#.#.#","#..##","#...#"],
+  play:["#...","##..","###.","##..","#..."],
+  stop:["####","####","####","####"],
+  step:["#..#","##.#","####","##.#","#..#"],
+  pkg:["..####..",".#....#.","########","#......#","#..##..#","#......#","########"],
+  gear:[".#.##.#.","########",".##..##.","##....##","##....##",".##..##.","########",".#.##.#."]
+};
+const px = (name, s=2, color) => {
+  const rows = PX[name], sh = [];
+  rows.forEach((r,y)=>[...r].forEach((c,x)=>{ if (c==='#') sh.push(`${x*s}px ${y*s}px 0 0 currentColor`); }));
+  return `<i class="px" style="width:${rows[0].length*s}px;height:${rows.length*s}px${color?`;color:var(--${color})`:''}" aria-hidden="true"><b style="width:${s}px;height:${s}px;box-shadow:${sh.join(',')}"></b></i>`;
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ================= settings schema ================= */
+const B = v => v ? 'true' : 'false';
+const CATS = ['Transition','Keys','Editor','Completion','Local AI','Appearance','Workbench','Files','Search','Languages','Git','Terminal','Debugger','Plugins','Advanced'];
+const STAGES = [
+  ['vscode','VS Code keys','Everything works like VS Code. The coach shows the Vim way as you go.'],
+  ['hybrid','Hybrid','You start typing in Insert mode and every VS Code shortcut works. Esc drops into Normal mode.'],
+  ['safety','Modal with safety net','Normal mode by default. Ctrl+S, Ctrl+Z, Ctrl+F, Ctrl+P, Ctrl+/ and Ctrl+Shift+K keep their VS Code meaning.'],
+  ['neovim','Pure Neovim','Your config decides every key. nvs.ide stays out of the way and the coach goes quiet.']
+];
+const SET = [
+  {c:'Transition',id:'stage',l:'Keybinding stage',d:'How much Vim you want. Each stage adds more of it. Your Neovim config is loaded at every stage.',t:'select',o:STAGES.map((s,i)=>[s[0],`${i+1} · ${s[1]}`]),def:'hybrid',vim:v=>`:NvsStage ${STAGES.findIndex(s=>s[0]===v)+1}`},
+  {c:'Transition',id:'coach',l:'Coach hints',d:'When you do something the long way, show the Vim way in a corner.',t:'bool',def:true,vim:v=>`vim.g.nvs.coach = ${B(v)}`},
+  {c:'Transition',id:'coachFreq',l:'Hint frequency',d:'How many times the same hint may appear.',t:'select',o:[['always','Every time'],['three','First 3 times'],['once','Once']],def:'three',vim:v=>`vim.g.nvs.coach_frequency = "${v}"`},
+  {c:'Transition',id:'vimCol',l:'Show Vim keys in menus',d:'The command palette and keybinding list show the Vim key beside each VS Code shortcut.',t:'bool',def:true,vim:v=>`vim.g.nvs.menu_vim_keys = ${B(v)}`},
+  {c:'Transition',id:'jk',l:'jk leaves Insert mode',d:'Type j then k quickly to get back to Normal mode without reaching for Esc.',t:'bool',def:false,vim:v=>v?'vim.keymap.set("i", "jk", "<Esc>")':'-- no jk mapping'},
+  {c:'Transition',id:'mouseVisual',l:'Mouse selection enters Visual mode',d:'Dragging with the mouse selects text the Vim way, so d, y and c act on it.',t:'bool',def:true,vim:v=>`vim.opt.mouse = "${v?'a':''}"`},
+  {c:'Keys',id:'leader',l:'Leader key',d:'Opens the leader menu in Normal mode.',t:'select',o:[[' ','Space'],['\\','Backslash'],[',','Comma']],def:' ',vim:v=>`vim.g.mapleader = "${v==='\\'?'\\\\':v}"`},
+  {c:'Keys',id:'timeout',l:'Leader menu delay (ms)',d:'How long nvs.ide waits for the next key before showing the menu.',t:'number',def:200,vim:v=>`vim.opt.timeoutlen = ${v}`},
+  {c:'Keys',id:'keytable',t:'keytable'},
+  {c:'Editor',id:'number',l:'Line numbers',d:'Show the line number column.',t:'bool',def:true,vim:v=>`vim.opt.number = ${B(v)}`},
+  {c:'Editor',id:'relative',l:'Relative line numbers',d:'Number lines by distance from the cursor, so 7j is easy to read off.',t:'bool',def:true,vim:v=>`vim.opt.relativenumber = ${B(v)}`},
+  {c:'Editor',id:'cursorline',l:'Highlight the cursor line',t:'bool',def:true,vim:v=>`vim.opt.cursorline = ${B(v)}`},
+  {c:'Editor',id:'wrap',l:'Wrap long lines',t:'bool',def:false,vim:v=>`vim.opt.wrap = ${B(v)}`},
+  {c:'Editor',id:'tabstop',l:'Tab size',t:'number',def:2,vim:v=>`vim.opt.tabstop = ${v}\nvim.opt.shiftwidth = ${v}`},
+  {c:'Editor',id:'expandtab',l:'Insert spaces for Tab',t:'bool',def:true,vim:v=>`vim.opt.expandtab = ${B(v)}`},
+  {c:'Editor',id:'scrolloff',l:'Lines kept above and below the cursor',t:'number',def:8,vim:v=>`vim.opt.scrolloff = ${v}`},
+  {c:'Editor',id:'signcolumn',l:'Sign column',d:'Where breakpoints, git changes and diagnostic signs appear.',t:'select',o:[['yes','Always'],['auto','When there are signs'],['no','Never']],def:'yes',vim:v=>`vim.opt.signcolumn = "${v}"`},
+  {c:'Editor',id:'colorcolumn',l:'Ruler column',d:'Draw a guide at this column. Leave empty for none.',t:'text',def:'',vim:v=>`vim.opt.colorcolumn = "${v}"`},
+  {c:'Editor',id:'list',l:'Show whitespace',t:'bool',def:false,vim:v=>`vim.opt.list = ${B(v)}`},
+  {c:'Editor',id:'undofile',l:'Keep undo history after closing',t:'bool',def:true,vim:v=>`vim.opt.undofile = ${B(v)}`},
+  {c:'Appearance',id:'colorscheme',l:'Color scheme',d:'More schemes install from Plugins.',t:'select',o:[['necronomicon','necronomicon']],def:'necronomicon',vim:v=>`vim.cmd.colorscheme("${v}")`},
+  {c:'Appearance',id:'font',l:'Font',t:'text',def:'BigBlueTerm437 Nerd Font Mono',vim:null},
+  {c:'Appearance',id:'fs',l:'Font size',t:'select',o:[[12,'12'],[13,'13'],[14,'14'],[16,'16']],def:13,vim:null},
+  {c:'Appearance',id:'cursorAnim',l:'Animated cursor',t:'bool',def:true,vim:v=>`vim.g.neovide_cursor_animation_length = ${v?'0.08':'0'}`},
+  {c:'Appearance',id:'blink',l:'Blinking cursor',t:'bool',def:false,vim:v=>`vim.opt.guicursor:append("a:blinkon${v?'500':'0'}")`},
+  {c:'Appearance',id:'minimap',l:'Minimap',t:'bool',def:true,vim:v=>`vim.g.nvs.minimap = ${B(v)}`},
+  {c:'Appearance',id:'breadcrumbs',l:'Breadcrumbs',d:'The path and symbol line above the editor.',t:'bool',def:true,vim:v=>v?'vim.opt.winbar = "%{%v:lua.nvs.breadcrumbs()%}"':'vim.opt.winbar = ""'},
+  {c:'Appearance',id:'tabline',l:'Tab bar',t:'select',o:[['2','Always'],['1','With 2 or more tabs'],['0','Never']],def:'2',vim:v=>`vim.opt.showtabline = ${v}`},
+  {c:'Appearance',id:'laststatus',l:'Status line',t:'select',o:[['3','One global line'],['2','One per window']],def:'3',vim:v=>`vim.opt.laststatus = ${v}`},
+  {c:'Workbench',id:'sidebarSide',l:'Sidebar position',t:'select',o:[['left','Left'],['right','Right']],def:'left',vim:v=>`vim.g.nvs.sidebar = "${v}"`},
+  {c:'Workbench',id:'activityBar',l:'Activity bar',t:'bool',def:true,vim:v=>`vim.g.nvs.activity_bar = ${B(v)}`},
+  {c:'Workbench',id:'panelStart',l:'Open the bottom panel at startup',t:'bool',def:true,vim:v=>`vim.g.nvs.panel_on_start = ${B(v)}`},
+  {c:'Workbench',id:'session',l:'Restore the last session',t:'bool',def:true,vim:v=>v?'vim.opt.sessionoptions = "buffers,curdir,tabpages,winsize"':'-- sessions off'},
+  {c:'Workbench',id:'confirm',l:'Ask before closing unsaved files',t:'bool',def:true,vim:v=>`vim.opt.confirm = ${B(v)}`},
+  {c:'Files',id:'autosave',l:'Auto save',t:'select',o:[['off','Off'],['delay','After a delay'],['focus','When focus changes']],def:'off',vim:v=>v==='off'?'-- auto save off':`vim.api.nvim_create_autocmd({ "${v==='delay'?'CursorHold':'FocusLost'}" }, { command = "silent! wall" })`},
+  {c:'Files',id:'trim',l:'Trim trailing whitespace on save',t:'bool',def:false,vim:v=>v?'vim.api.nvim_create_autocmd("BufWritePre", { command = [[%s/\\s\\+$//e]] })':'-- no trimming'},
+  {c:'Files',id:'eol',l:'End files with a newline',t:'bool',def:true,vim:v=>`vim.opt.fixendofline = ${B(v)}`},
+  {c:'Files',id:'encoding',l:'Encoding',t:'select',o:[['utf-8','UTF-8'],['utf-16le','UTF-16 LE'],['latin1','Latin-1']],def:'utf-8',vim:v=>`vim.opt.fileencoding = "${v}"`},
+  {c:'Files',id:'exclude',l:'Hide from explorer and search',t:'text',def:'.git,node_modules,target',vim:v=>`vim.g.nvs.exclude = { ${v.split(',').filter(Boolean).map(x=>`"${x.trim()}"`).join(', ')} }`},
+  {c:'Search',id:'ignorecase',l:'Ignore case',t:'bool',def:true,vim:v=>`vim.opt.ignorecase = ${B(v)}`},
+  {c:'Search',id:'smartcase',l:'Match case when the search has capitals',t:'bool',def:true,vim:v=>`vim.opt.smartcase = ${B(v)}`},
+  {c:'Search',id:'hlsearch',l:'Highlight all matches',t:'bool',def:true,vim:v=>`vim.opt.hlsearch = ${B(v)}`},
+  {c:'Search',id:'rg',l:'Extra ripgrep arguments',t:'text',def:'--hidden',vim:v=>`vim.opt.grepprg = "rg --vimgrep ${v}"`},
+  {c:'Languages',id:'formatOnSave',l:'Format on save',t:'bool',def:true,vim:v=>v?'vim.api.nvim_create_autocmd("BufWritePre", { callback = function() vim.lsp.buf.format() end })':'-- format on save off'},
+  {c:'Languages',id:'inlay',l:'Inlay hints',d:'Parameter names and types shown inline.',t:'bool',def:false,vim:v=>`vim.lsp.inlay_hint.enable(${B(v)})`},
+  {c:'Languages',id:'virtText',l:'Diagnostics at the end of the line',t:'bool',def:true,vim:v=>`vim.diagnostic.config({ virtual_text = ${B(v)} })`},
+  {c:'Languages',id:'diagSigns',l:'Diagnostic signs in the gutter',t:'bool',def:true,vim:v=>`vim.diagnostic.config({ signs = ${B(v)} })`},
+  {c:'Languages',id:'insertDiag',l:'Update diagnostics while typing',t:'bool',def:false,vim:v=>`vim.diagnostic.config({ update_in_insert = ${B(v)} })`},
+  {c:'Languages',id:'mason',l:'Install language servers automatically',d:'Uses mason.nvim when you open a file type with no server.',t:'bool',def:true,vim:v=>`require("mason-lspconfig").setup({ automatic_installation = ${B(v)} })`},
+  {c:'Git',id:'gitSigns',l:'Change markers in the gutter',t:'bool',def:true,vim:v=>`require("gitsigns").setup({ signcolumn = ${B(v)} })`},
+  {c:'Git',id:'blame',l:'Blame on the current line',t:'bool',def:false,vim:v=>`require("gitsigns").setup({ current_line_blame = ${B(v)} })`},
+  {c:'Git',id:'autofetch',l:'Fetch in the background',t:'bool',def:false,vim:v=>`vim.g.nvs.git_autofetch = ${B(v)}`},
+  {c:'Terminal',id:'shell',l:'Shell',t:'select',o:[['pwsh','PowerShell 7'],['cmd','Command Prompt'],['bash','Git Bash']],def:'pwsh',vim:v=>`vim.opt.shell = "${v}"`},
+  {c:'Terminal',id:'termInsert',l:'Start terminals in Insert mode',d:'Ctrl+\\ Ctrl+N gets you back to Normal mode inside a terminal.',t:'bool',def:true,vim:v=>v?'vim.api.nvim_create_autocmd("TermOpen", { command = "startinsert" })':'-- terminals open in Normal mode'},
+  {c:'Terminal',id:'scrollback',l:'Scrollback lines',t:'number',def:10000,vim:v=>`vim.opt.scrollback = ${v}`},
+  {c:'Debugger',id:'dapOpen',l:'Show Run and Debug when a session starts',t:'bool',def:true,vim:v=>`vim.g.nvs.dap_focus = ${B(v)}`},
+  {c:'Debugger',id:'dapVirt',l:'Show variable values inline',t:'bool',def:true,vim:v=>`require("nvim-dap-virtual-text").setup({ enabled = ${B(v)} })`},
+  {c:'Plugins',id:'lazyCheck',l:'Check for plugin updates',t:'bool',def:true,vim:v=>`require("lazy").setup("plugins", { checker = { enabled = ${B(v)} } })`},
+  {c:'Plugins',id:'exthost',l:'Extension host',d:'Runs VS Code extensions that need code (Tier 2). On demand means it only runs while one is installed.',t:'select',o:[['demand','On demand'],['always','Always'],['never','Never']],def:'demand',vim:v=>`vim.g.nvs.extension_host = "${v}"`},
+  {c:'Plugins',id:'openvsx',l:'Extension registry',t:'text',def:'https://open-vsx.org',vim:v=>`vim.g.nvs.registry = "${v}"`},
+  {c:'Plugins',id:'tier3',l:'Allow webview extensions',d:'Tier 3 is not built yet.',t:'bool',def:false,dis:true,vim:v=>`vim.g.nvs.webviews = ${B(v)}`},
+  {c:'Advanced',id:'nvimPath',l:'Neovim binary',t:'text',def:'nvim',vim:v=>`-- launched as: ${v} --embed`},
+  {c:'Advanced',id:'configDir',l:'Config folder',t:'text',def:'$XDG_CONFIG_HOME/nvim',vim:v=>`-- config loaded from ${v}`},
+  {c:'Advanced',id:'renderer',l:'Renderer',t:'select',o:[['auto','Automatic'],['vulkan','Vulkan'],['dx12','DirectX 12'],['software','Software']],def:'auto',vim:v=>`vim.g.nvs.renderer = "${v}"`},
+  {c:'Advanced',id:'log',l:'Log level',t:'select',o:[['warn','Warnings'],['info','Info'],['debug','Debug']],def:'warn',vim:v=>`vim.lsp.set_log_level("${v}")`},
+  {c:'Completion',id:'cmpAuto',l:'Show suggestions while typing',d:'The IntelliSense-style menu opens on its own as you type. Off means Ctrl+Space opens it.',t:'bool',def:true,vim:v=>`opts.completion.menu.auto_show = ${B(v)}  -- blink.cmp`},
+  {c:'Completion',id:'cmpDocs',l:'Show documentation beside the menu',t:'bool',def:true,vim:v=>`opts.completion.documentation.auto_show = ${B(v)}`},
+  {c:'Completion',id:'cmpGhost',l:'Preview the selected item inline',d:'Grey text shows what accepting would insert.',t:'bool',def:true,vim:v=>`opts.completion.ghost_text.enabled = ${B(v)}`},
+  {c:'Completion',id:'cmpAccept',l:'Accept with',t:'select',o:[['enter','Enter'],['tab','Tab'],['ctrl-y','Ctrl+Y (Vim default)']],def:'enter',vim:v=>`opts.keymap.preset = "${v==='enter'?'enter':v==='tab'?'super-tab':'default'}"`},
+  {c:'Completion',id:'snippets',l:'Include snippets',t:'bool',def:true,vim:v=>`opts.sources.default = { "lsp", "path", ${v?'"snippets", ':''}"buffer" }`},
+  {c:'Local AI',id:'aiOn',l:'Use a local model',d:'nvs.ide talks to Ollama on your machine. Nothing leaves it unless you point the address elsewhere.',t:'bool',def:false,vim:v=>`:NvsOllama ${v?'on':'off'}`},
+  {c:'Local AI',id:'aiUrl',l:'Ollama address',d:'If Ollama runs on another machine, forward port 11434 over SSH and keep this default.',t:'text',def:'http://localhost:11434',vim:v=>`:NvsOllama url ${v}`},
+  {c:'Local AI',id:'aiChat',l:'Model for Ask',t:'text',def:'qwen2.5-coder:7b',vim:v=>`:NvsOllama model ${v}`},
+  {c:'Local AI',id:'aiComplete',l:'Model for ghost-text completion',d:'A small model keeps suggestions fast.',t:'text',def:'qwen2.5-coder:1.5b',vim:v=>`complete_model = "${v}"  -- minuet-ai.nvim`},
+  {c:'Local AI',id:'aiGhost',l:'Ghost-text suggestions',d:'Longer grey suggestions as you type, like Copilot. Alt+A accepts, Alt+L accepts one line, Alt+E dismisses.',t:'bool',def:true,vim:v=>`ghost_text = ${B(v)}`},
+  {c:'Local AI',id:'aiAsk',l:'Ask falls back to the model',d:'When no written answer matches, Ask sends the question to the model along with the closest written answers.',t:'bool',def:true,vim:v=>`ask_fallback = ${B(v)}`},
+  {c:'Local AI',id:'aitest',t:'aitest'},
+];
+SET.find(s=>s.id==='font').vim = v => `vim.o.guifont = "${v}:h${S.cfg.fs}"`;
+SET.find(s=>s.id==='fs').vim = v => `vim.o.guifont = "${S.cfg.font}:h${v}"`;
+const SETMAP = Object.fromEntries(SET.map(s=>[s.id,s]));
+const VIMOPT = { number:'number', nu:'number', relativenumber:'relative', rnu:'relative', cursorline:'cursorline', cul:'cursorline', wrap:'wrap', list:'list', hlsearch:'hlsearch', hls:'hlsearch', ignorecase:'ignorecase', ic:'ignorecase', smartcase:'smartcase', scs:'smartcase', expandtab:'expandtab', et:'expandtab', undofile:'undofile', confirm:'confirm' };
+
+const KEYT = [
+  ['Save','Ctrl+S',':w',true],['Undo / redo','Ctrl+Z / Ctrl+Y','u / Ctrl+R',true],['Find in file','Ctrl+F','/ then n, N',true],
+  ['Find files','Ctrl+P','<leader>ff',true],['Search the project','Ctrl+Shift+F','<leader>fg',false],['Command palette','Ctrl+Shift+P / F1',': or F1',false],
+  ['Delete line','Ctrl+Shift+K','dd',true],['Toggle comment','Ctrl+/','gcc',true],['Go to definition','F12','gd',false],
+  ['Rename symbol','F2','grn',false],['Find references','Shift+F12','grr',false],['Code action','Ctrl+.','gra',false],
+  ['Toggle sidebar','Ctrl+B','<leader>e',false],['Toggle terminal','Ctrl+`','<leader>t',false],['Move between panes','Ctrl+1 / Ctrl+0','Ctrl+W h/j/l or Ctrl+H/J/L',false],
+  ['Go to line','Ctrl+G',':42 or 42G',false],['Select next match','Ctrl+D','* then cgn',false],['Column select','Shift+Alt+drag','Ctrl+V',false]
+];
+
+/* ================= plugins ================= */
+const PLUGS = [
+  { id:'LazyVim/LazyVim', nm:'LazyVim', src:'nvim', grp:'Base', inst:true, ds:'The Neovim distribution nvs.ide is built on: sensible defaults, keymaps and plugin setup for everything below.', load:['at startup'], keys:[['<leader>l','Open lazy.nvim'],['<leader>L','LazyVim changelog']], opts:[['colorscheme','select','necronomicon',['necronomicon','tokyonight','catppuccin']]], eq:["VS Code's out-of-the-box setup"] },
+  { id:'folke/snacks.nvim', nm:'snacks.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'Fuzzy finder, file explorer, terminal, notifications and dashboard in one plugin.', load:['at startup'], keys:[['<leader><space>','Find files'],['<leader>/','Search the project'],['<leader>e','Explorer'],['<C-/>','Terminal (Stage 4)']], opts:[['picker.hidden','bool',false],['explorer.replace_netrw','bool',true]], eq:['Quick Open (Ctrl+P)','Explorer (Ctrl+B)','Integrated terminal','Notifications'] },
+  { id:'saghen/blink.cmp', nm:'blink.cmp', src:'nvim', grp:'LazyVim core', inst:true, ds:'The completion menu: suggestions from language servers, snippets, paths and the buffer, with documentation beside it.', load:['event InsertEnter'], keys:[['<CR>','Accept'],['<C-Space>','Open the menu'],['<C-e>','Close the menu']], opts:[['documentation.auto_show','bool',true],['ghost_text.enabled','bool',true]], eq:['IntelliSense'] },
+  { id:'folke/which-key.nvim', nm:'which-key.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'Shows what your next key can do. Powers the leader menu.', load:['event VeryLazy'], keys:[['<leader>','Wait to see the menu']], opts:[['delay','number',200],['preset','select','helix',['classic','modern','helix']]], eq:['Keyboard shortcut hints'] },
+  { id:'lewis6991/gitsigns.nvim', nm:'gitsigns.nvim', src:'nvim', grp:'LazyVim core', inst:true, upd:true, ds:'Git change markers, hunk staging and line blame.', load:['event LazyFile'], keys:[[']h','Next change'],['[h','Previous change'],['<leader>ghs','Stage this change'],['<leader>ghb','Blame this line']], opts:[['signcolumn','bool',true],['current_line_blame','bool',false]], eq:['GitLens (eamodio.gitlens)','Git gutter indicators'] },
+  { id:'ThePrimeagen/harpoon', nm:'harpoon', src:'extra', x:'editor.harpoon2', grp:'LazyVim extra', inst:true, ds:'Pin the handful of files you work in and jump to each with one key.', load:['keys <leader>h'], keys:[['<leader>H','Pin this file'],['<leader>h','Open the pinned list'],['<leader>1..9','Jump to a pinned file']], opts:[], eq:['Pinned tabs'] },
+  { id:'nvim-mini/mini.surround', nm:'mini.surround', src:'extra', x:'coding.mini-surround', grp:'LazyVim extra', inst:true, ds:'Add, change and delete brackets, quotes and tags around text.', load:['keys gs'], keys:[['gsa','Add surround'],['gsd','Delete surround'],['gsr','Replace surround']], opts:[], eq:['Bracket and quote wrapping'] },
+  { id:'folke/flash.nvim', nm:'flash.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'Jump anywhere on screen by typing two characters.', load:['event VeryLazy'], keys:[['s','Jump to a location'],['S','Jump to a code block']], opts:[['rainbow','bool',false]], eq:[] },
+  { id:'folke/trouble.nvim', nm:'trouble.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'A list for diagnostics, references and quickfix results.', load:['cmd Trouble'], keys:[['<leader>xx','Diagnostics list']], opts:[['auto_preview','bool',true]], eq:['Problems panel','Error Lens (usernamehw.errorlens)'] },
+  { id:'stevearc/conform.nvim', nm:'conform.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'Runs formatters such as prettier, stylua and rustfmt, and formats on save.', load:['event BufWritePre'], keys:[['<leader>cf','Format file']], opts:[['format_on_save','bool',true]], eq:['Prettier (esbenp.prettier-vscode)','Format on save'] },
+  { id:'mfussenegger/nvim-lint', nm:'nvim-lint', src:'nvim', grp:'LazyVim core', inst:true, ds:'Runs linters in the background and reports through diagnostics.', load:['event LazyFile'], keys:[], opts:[], eq:['ESLint (dbaeumer.vscode-eslint)'] },
+  { id:'MagicDuck/grug-far.nvim', nm:'grug-far.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'Search and replace across the whole project, with a live preview.', load:['cmd GrugFar'], keys:[['<leader>sr','Search and replace']], opts:[], eq:['Replace in files (Ctrl+Shift+H)'] },
+  { id:'mason-org/mason.nvim', nm:'mason.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'Installs language servers, formatters, linters and debug adapters.', load:['cmd Mason'], keys:[['<leader>cm','Open Mason']], opts:[], eq:['Language extensions that bundle a server'] },
+  { id:'akinsho/bufferline.nvim', nm:'bufferline.nvim', src:'nvim', grp:'LazyVim core', inst:true, ds:'The tab bar of open files.', load:['event VeryLazy'], keys:[['H / L','Previous / next file'],['<leader>bd','Close file']], opts:[], eq:['Editor tabs'] },
+  { id:'milanglacier/minuet-ai.nvim', nm:'minuet-ai.nvim', src:'nvim', grp:'nvs.ide adds', inst:true, ds:'Ghost-text code suggestions from a local model through Ollama. Loads only when Local AI is on.', load:['event InsertEnter','when Local AI is on'], keys:[['<A-a>','Accept suggestion'],['<A-l>','Accept one line'],['<A-e>','Dismiss']], opts:[['context_window','number',512],['n_completions','number',1]], eq:['GitHub Copilot, running on your own machine'] },
+  { id:'nvim-telescope/telescope.nvim', nm:'telescope.nvim', src:'extra', x:'editor.telescope', grp:'LazyVim extra', inst:false, ds:'The classic fuzzy finder. snacks.nvim covers the same jobs by default; turn this on if you prefer telescope.', load:['cmd Telescope'], keys:[['<leader>ff','Find files'],['<leader>sg','Search the project']], opts:[], eq:['Quick Open (Ctrl+P)'] },
+  { id:'lang.python', nm:'Python', src:'extra', x:'lang.python', grp:'LazyVim extra', inst:false, ds:'pyright and ruff, debugging with debugpy, and virtual env selection.', load:['filetype python'], keys:[['<leader>cv','Select virtual env']], opts:[], eq:['Python (ms-python.python)','Pylance'] },
+  { id:'lang.typescript', nm:'TypeScript', src:'extra', x:'lang.typescript', grp:'LazyVim extra', inst:false, ds:'vtsls language server, organise imports, and JavaScript debugging.', load:['filetype typescript, javascript'], keys:[['<leader>co','Organise imports']], opts:[], eq:['Built-in TypeScript support'] },
+  { id:'lang.rust', nm:'Rust', src:'extra', x:'lang.rust', grp:'LazyVim extra', inst:false, ds:'rust-analyzer through rustaceanvim, crates.io versions in Cargo.toml, and debugging.', load:['filetype rust'], keys:[['<leader>cR','Rust code actions']], opts:[], eq:['rust-analyzer (rust-lang.rust-analyzer)'] },
+  { id:'lang.go', nm:'Go', src:'extra', x:'lang.go', grp:'LazyVim extra', inst:false, ds:'gopls, gofumpt and delve debugging.', load:['filetype go'], keys:[], opts:[], eq:['Go (golang.go)'] },
+  { id:'sindrets/diffview.nvim', nm:'diffview.nvim', src:'nvim', grp:'Community', inst:false, ds:'Side-by-side diffs and file history for any commit.', load:['cmd DiffviewOpen'], keys:[['<leader>gd','Open diff view']], opts:[['enhanced_diff_hl','bool',true]], eq:['GitLens file history','Git Graph (mhutchie.git-graph)'] },
+  { id:'stevearc/oil.nvim', nm:'oil.nvim', src:'nvim', grp:'Community', inst:false, ds:'Edit a folder like a text file: rename, move and delete files by editing lines.', load:['cmd Oil'], keys:[['-','Open parent folder']], opts:[], eq:['Bulk rename in the explorer'] },
+  { id:'catppuccin.catppuccin-vsc', nm:'Catppuccin', src:'vsx', tier:'t1', inst:false, ds:'Color theme. Converted to Neovim highlight groups when installed.', alt:null },
+  { id:'esbenp.prettier-vscode', nm:'Prettier', src:'vsx', tier:'t2', inst:false, ds:'Formatter provider. Runs in the extension host and reaches Neovim as a virtual LSP server.', alt:'stevearc/conform.nvim' },
+  { id:'dbaeumer.vscode-eslint', nm:'ESLint', src:'vsx', tier:'t2', inst:false, ds:'Diagnostics and fixes through the extension host.', alt:'mfussenegger/nvim-lint' },
+  { id:'eamodio.gitlens', nm:'GitLens', src:'vsx', tier:'t2', inst:false, ds:"Blame, history and repository views. Parts built on webviews won't appear until Tier 3.", alt:'lewis6991/gitsigns.nvim' },
+  { id:'ms-toolsai.jupyter', nm:'Jupyter', src:'vsx', tier:'t3', inst:false, ds:'The notebook UI is built on webviews. Deferred to Tier 3.', alt:null }
+];
+const TIERNAME = { lsp:'NATIVE LSP', t1:'TIER 1', t2:'TIER 2', t3:'TIER 3' };
+const PL = Object.fromEntries(PLUGS.map(p=>[p.id,p]));
+const POPT = {};
+PLUGS.forEach(p => { POPT[p.id] = {}; (p.opts||[]).forEach(o => POPT[p.id][o[0]] = o[2]); p.on = true; });
+
+/* ================= sample project ================= */
+// Both are generated from runtime/ by scripts/build-preview.py, so the preview
+// answers with the same knowledge base and lessons as the real editor.
+const KB = {"version": 1, "note": "Ask knowledge base for nvs.ide. Each entry answers one 'how do I...' question. 'q' holds phrasings and keywords used for matching; 'keys' is the Vim way, 'vscode' is what the user probably already knows, 'try' is an optional Ex command the Ask window can run for the user.", "synonyms": {"remove": "delete", "erase": "delete", "kill": "delete", "cut": "delete", "duplicate": "copy", "yank": "copy", "clone": "copy", "put": "paste", "leave": "exit", "quit": "exit", "close": "exit", "escape": "exit", "begin": "start", "beginning": "start", "front": "start", "home": "start", "finish": "end", "last": "end", "revert": "undo", "back": "undo", "find": "search", "look": "search", "grep": "search", "locate": "search", "swap": "replace", "substitute": "replace", "open": "open", "switch": "switch", "jump": "go", "navigate": "go", "goto": "go", "folder": "file", "files": "file", "document": "file", "tree": "explorer", "sidebar": "explorer", "store": "save", "write": "save", "highlight": "select", "mark": "select", "selection": "select", "shell": "terminal", "console": "terminal", "cmd": "terminal", "powershell": "terminal", "definition": "definition", "declaration": "definition", "usages": "references", "callers": "references", "extension": "plugin", "extensions": "plugin", "addon": "plugin", "plugins": "plugin", "package": "plugin", "preferences": "settings", "config": "settings", "configuration": "settings", "option": "settings", "options": "settings", "autocomplete": "completion", "intellisense": "completion", "suggestions": "completion", "suggest": "completion", "ai": "ollama", "llm": "ollama", "model": "ollama", "chatbot": "ollama", "copilot": "ollama", "lines": "line", "words": "word", "characters": "character", "char": "character", "letter": "character", "tabs": "buffer", "tab": "buffer", "buffers": "buffer", "panes": "window", "pane": "window", "split": "window", "splits": "window", "windows": "window"}, "entries": [{"id": "exit-vim", "cat": "Basics", "q": ["how do i exit vim", "quit neovim", "close the editor", "get out of vim", "exit"], "a": "Press Esc to be sure you're in Normal mode, then type :q and Enter. :wq saves first, :q! throws away changes, and :qa quits everything.", "keys": ":q", "vscode": "Ctrl+Q"}, {"id": "modes", "cat": "Basics", "q": ["what are modes", "normal mode insert mode", "why can't i type", "keys do weird things", "mode"], "a": "Vim has modes. Normal mode is for moving and editing commands, Insert mode is for typing text, and Visual mode is for selecting. The status bar shows which one you're in. i enters Insert mode and Esc goes back to Normal.", "keys": "i / Esc", "vscode": "(VS Code has no modes)"}, {"id": "insert", "cat": "Basics", "q": ["start typing", "insert text", "type text", "enter insert mode", "edit text"], "a": "From Normal mode, press i to type before the cursor, a to type after it, A to type at the end of the line, I at the start, o to open a new line below and O above.", "keys": "i a A I o O", "vscode": "Just type"}, {"id": "leave-insert", "cat": "Basics", "q": ["exit insert mode", "get back to normal mode", "stop typing", "escape insert"], "a": "Press Esc. If Esc feels far away, turn on 'jk leaves Insert mode' in Settings > Transition, then type j and k quickly.", "keys": "Esc", "vscode": "(no modes)"}, {"id": "save", "cat": "Files", "q": ["save file", "save my work", "write file", "save"], "a": "Type :w and Enter. In nvs.ide, Ctrl+S also saves at every stage, because LazyVim maps it. :wa saves every open file.", "keys": ":w", "vscode": "Ctrl+S", "try": "write"}, {"id": "save-all", "cat": "Files", "q": ["save all files", "save everything"], "a": "Type :wa and Enter to write every changed file.", "keys": ":wa", "vscode": "Ctrl+K S", "try": "wall"}, {"id": "find-file", "cat": "Files", "q": ["open a file", "find a file", "search file by name", "quick open", "go to file"], "a": "Press Space Space (or Space f f) to fuzzy-find a file in the project, like Ctrl+P in VS Code. Type part of the name and press Enter.", "keys": "<leader><space>", "vscode": "Ctrl+P"}, {"id": "recent", "cat": "Files", "q": ["recent files", "recently opened", "file history"], "a": "Space f r lists recently opened files.", "keys": "<leader>fr", "vscode": "Ctrl+R"}, {"id": "explorer", "cat": "Files", "q": ["file explorer", "show sidebar", "file tree", "toggle explorer", "see my files"], "a": "Space e toggles the file explorer. Inside it, j and k move, l or Enter opens, h closes a folder, a creates a file, d deletes and r renames.", "keys": "<leader>e", "vscode": "Ctrl+B / Ctrl+Shift+E"}, {"id": "new-file", "cat": "Files", "q": ["create a new file", "new file", "make a file"], "a": "Type :e followed by the new file name, like :e notes.md, then save with :w. In the explorer (Space e), press a.", "keys": ":e name", "vscode": "Ctrl+N"}, {"id": "rename-file", "cat": "Files", "q": ["rename a file", "rename file", "move a file"], "a": "Open the explorer with Space e, put the cursor on the file and press r.", "keys": "<leader>e then r", "vscode": "F2 in the explorer"}, {"id": "close-buffer", "cat": "Files", "q": ["close file", "close tab", "close this buffer", "close current file"], "a": "Space b d closes the current buffer (Vim's word for an open file). Space b o closes all the others.", "keys": "<leader>bd", "vscode": "Ctrl+W"}, {"id": "switch-buffer", "cat": "Files", "q": ["switch between open files", "next tab", "previous tab", "switch buffer", "go to other file"], "a": "Shift+L goes to the next open file and Shift+H to the previous one. Space , lists all open buffers.", "keys": "H / L", "vscode": "Ctrl+Tab / Ctrl+PgDn"}, {"id": "harpoon", "cat": "Files", "q": ["bookmark files", "pin a file", "harpoon", "favorite files", "quick switch files"], "a": "Harpoon keeps a short list of files you jump between. Space H adds the current file, Space h opens the list, and Space 1 to Space 9 jump straight to a slot.", "keys": "<leader>H, <leader>h, <leader>1..9", "vscode": "(pinned tabs)"}, {"id": "hjkl", "cat": "Moving", "q": ["move the cursor", "move around", "arrow keys", "hjkl", "move left right up down"], "a": "h moves left, j down, k up and l right. Put a number first to repeat: 5j moves five lines down. The relative line numbers on the left tell you that number.", "keys": "h j k l", "vscode": "Arrow keys"}, {"id": "word", "cat": "Moving", "q": ["move by word", "next word", "previous word", "jump words"], "a": "w jumps to the start of the next word, b back to the previous word, and e to the end of the word.", "keys": "w b e", "vscode": "Ctrl+Right / Ctrl+Left"}, {"id": "line-ends", "cat": "Moving", "q": ["start of line", "end of line", "go to line start", "go to line end", "beginning of line"], "a": "0 goes to the very start of the line, ^ to the first non-blank character, and $ to the end.", "keys": "0 ^ $", "vscode": "Home / End"}, {"id": "file-ends", "cat": "Moving", "q": ["top of file", "bottom of file", "start of file", "end of file", "first line", "last line"], "a": "gg goes to the first line and G to the last.", "keys": "gg / G", "vscode": "Ctrl+Home / Ctrl+End"}, {"id": "goto-line", "cat": "Moving", "q": ["go to line number", "jump to line", "line 42", "go to line"], "a": "Type the number then G (42G), or type :42 and Enter.", "keys": "42G or :42", "vscode": "Ctrl+G"}, {"id": "page", "cat": "Moving", "q": ["page down", "page up", "scroll half page", "scroll down", "scroll up"], "a": "Ctrl+D scrolls half a page down and Ctrl+U half a page up. Ctrl+F and Ctrl+B move a full page, except at Stages 1 to 3 where those keep their VS Code meaning.", "keys": "Ctrl+D / Ctrl+U", "vscode": "PgDn / PgUp"}, {"id": "jump-back", "cat": "Moving", "q": ["go back to where i was", "previous location", "jump back", "go forward"], "a": "Ctrl+O jumps back to where you were and Ctrl+I jumps forward again.", "keys": "Ctrl+O / Ctrl+I", "vscode": "Alt+Left / Alt+Right"}, {"id": "bracket", "cat": "Moving", "q": ["matching bracket", "jump to matching parenthesis", "other brace"], "a": "% jumps to the bracket, brace or parenthesis matching the one under the cursor.", "keys": "%", "vscode": "Ctrl+Shift+\\"}, {"id": "flash", "cat": "Moving", "q": ["jump anywhere on screen", "jump to a word i can see", "flash"], "a": "Press s, then type the first two letters of where you want to go. Labels appear on every match; press the label to jump. This comes from flash.nvim.", "keys": "s", "vscode": "(no equivalent)"}, {"id": "delete-char", "cat": "Editing", "q": ["delete a character", "delete letter", "remove a character"], "a": "x deletes the character under the cursor. 3x deletes three.", "keys": "x", "vscode": "Delete"}, {"id": "delete-line", "cat": "Editing", "q": ["delete a line", "remove this line", "delete line", "delete the whole line"], "a": "dd deletes the current line. 3dd deletes three lines. What you delete is kept, so p pastes it back somewhere else.", "keys": "dd", "vscode": "Ctrl+Shift+K"}, {"id": "delete-word", "cat": "Editing", "q": ["delete a word", "remove word", "delete word"], "a": "dw deletes from the cursor to the start of the next word. diw deletes the whole word the cursor is on.", "keys": "dw / diw", "vscode": "Ctrl+Delete"}, {"id": "delete-to-end", "cat": "Editing", "q": ["delete to end of line", "delete rest of line"], "a": "D (or d$) deletes from the cursor to the end of the line.", "keys": "D", "vscode": "Ctrl+K (with an extension)"}, {"id": "change-word", "cat": "Editing", "q": ["change a word", "replace word", "retype word", "change inside quotes", "change inside parentheses"], "a": "ciw deletes the word under the cursor and puts you in Insert mode to type the new one. The same idea works with other targets: ci\" changes inside quotes, ci( inside parentheses.", "keys": "ciw / ci\" / ci(", "vscode": "Double-click then type"}, {"id": "replace-char", "cat": "Editing", "q": ["replace one character", "change a letter", "fix a typo"], "a": "r then a character replaces the one under the cursor without entering Insert mode.", "keys": "r", "vscode": "Select and type"}, {"id": "undo", "cat": "Editing", "q": ["undo", "undo change", "take back", "revert change"], "a": "u undoes the last change. At Stages 1 to 3, Ctrl+Z works too.", "keys": "u", "vscode": "Ctrl+Z"}, {"id": "redo", "cat": "Editing", "q": ["redo", "redo change"], "a": "Ctrl+R redoes what u undid.", "keys": "Ctrl+R", "vscode": "Ctrl+Y / Ctrl+Shift+Z"}, {"id": "repeat", "cat": "Editing", "q": ["repeat last change", "do that again", "repeat command"], "a": ". (a dot) repeats your last change. Change one word with ciw, move to another and press . to change it the same way.", "keys": ".", "vscode": "(no equivalent)"}, {"id": "copy-line", "cat": "Editing", "q": ["copy a line", "copy line", "yank line", "duplicate line"], "a": "yy copies the current line. p pastes it below and P above. yyp duplicates a line in one go.", "keys": "yy then p", "vscode": "Ctrl+C / Shift+Alt+Down"}, {"id": "copy-selection", "cat": "Editing", "q": ["copy selection", "copy text", "copy word", "copy to clipboard", "system clipboard"], "a": "Select with v, then press y to copy. nvs.ide shares the system clipboard, so Ctrl+V in other apps pastes it.", "keys": "v … y", "vscode": "Ctrl+C"}, {"id": "paste", "cat": "Editing", "q": ["paste", "paste text", "paste from clipboard"], "a": "p pastes after the cursor and P before it. In Insert mode, Ctrl+R then + pastes the system clipboard.", "keys": "p / P", "vscode": "Ctrl+V"}, {"id": "move-line", "cat": "Editing", "q": ["move line up", "move line down", "move a line", "swap lines"], "a": "Alt+J moves the current line (or selection) down and Alt+K moves it up.", "keys": "Alt+J / Alt+K", "vscode": "Alt+Down / Alt+Up"}, {"id": "indent", "cat": "Editing", "q": ["indent", "unindent", "indent line", "tab a line", "outdent"], "a": ">> indents the line and << unindents it. In Visual mode, > and < shift the selection and keep it selected.", "keys": ">> / <<", "vscode": "Tab / Shift+Tab"}, {"id": "join", "cat": "Editing", "q": ["join lines", "merge lines", "combine two lines"], "a": "J joins the next line onto the end of this one.", "keys": "J", "vscode": "Ctrl+J"}, {"id": "case", "cat": "Editing", "q": ["change case", "uppercase", "lowercase", "toggle case", "capitalize"], "a": "~ flips the case of the character under the cursor. In Visual mode, U makes the selection uppercase and u lowercase.", "keys": "~ / U / u", "vscode": "Transform commands in the palette"}, {"id": "comment", "cat": "Editing", "q": ["comment a line", "comment out", "uncomment", "toggle comment"], "a": "gcc comments or uncomments the current line. In Visual mode, gc does the selection. At Stages 1 to 3, Ctrl+/ works as well.", "keys": "gcc / gc", "vscode": "Ctrl+/"}, {"id": "surround", "cat": "Editing", "q": ["surround with quotes", "add brackets around", "wrap in parentheses", "change surrounding quotes", "delete surrounding", "wrap word in quotes", "put quotes around", "wrap in quotes", "add parentheses around"], "a": "gsa adds a surround (gsaiw\" wraps the word in quotes), gsd deletes one and gsr replaces one. This comes from mini.surround.", "keys": "gsa / gsd / gsr", "vscode": "(select, then type a quote)"}, {"id": "multi-cursor", "cat": "Editing", "q": ["multiple cursors", "multi cursor", "edit several lines at once", "add cursor"], "a": "Vim does this differently. For a column, press Ctrl+V, select down with j, then I, type, and Esc: the text appears on every line. To change each match of a word, press * on it, then cgn, type, Esc, and press . for each next match.", "keys": "Ctrl+V … I / * cgn .", "vscode": "Alt+Click / Ctrl+D"}, {"id": "macro", "cat": "Editing", "q": ["record a macro", "repeat a sequence", "macro", "automate edits"], "a": "qa starts recording into register a, q stops. @a plays it back, and 10@a plays it ten times.", "keys": "qa … q, @a", "vscode": "(needs an extension)"}, {"id": "visual", "cat": "Selecting", "q": ["select text", "highlight text", "visual mode", "select characters"], "a": "v starts selecting character by character, V selects whole lines, and Ctrl+V selects a block (a column). Move to grow the selection, then act on it: d deletes, y copies, c changes.", "keys": "v / V / Ctrl+V", "vscode": "Shift+Arrows"}, {"id": "select-all", "cat": "Selecting", "q": ["select all", "select everything", "select whole file"], "a": "ggVG selects the whole file: go to the top, start a line selection, go to the bottom.", "keys": "ggVG", "vscode": "Ctrl+A"}, {"id": "select-word", "cat": "Selecting", "q": ["select a word", "select inside quotes", "select inside brackets", "select paragraph"], "a": "viw selects the word under the cursor, vi\" inside quotes, vi( inside parentheses and vip the paragraph.", "keys": "viw / vi\" / vip", "vscode": "Double-click / Ctrl+Shift+Right"}, {"id": "search-file", "cat": "Search", "q": ["search in current file", "find text in current file", "find word", "search for text", "find next match"], "a": "Type / then the text and Enter. n goes to the next match and N to the previous. * searches for the word under the cursor.", "keys": "/text, n, N, *", "vscode": "Ctrl+F"}, {"id": "search-project", "cat": "Search", "q": ["search in project", "search all files", "find in all files", "grep project", "global search", "search every file"], "a": "Space / (or Space s g) searches every file in the project as you type.", "keys": "<leader>/", "vscode": "Ctrl+Shift+F"}, {"id": "replace-file", "cat": "Search", "q": ["find and replace", "replace text in current file", "substitute in current file", "replace every match here"], "a": "Type :%s/old/new/g and Enter to replace every match in the file. Add c at the end (/gc) to confirm each one.", "keys": ":%s/old/new/g", "vscode": "Ctrl+H"}, {"id": "replace-project", "cat": "Search", "q": ["replace in project", "replace in all files", "rename across files"], "a": "Space s r opens a search-and-replace panel for the whole project (grug-far).", "keys": "<leader>sr", "vscode": "Ctrl+Shift+H"}, {"id": "clear-highlight", "cat": "Search", "q": ["clear search highlight", "remove highlight", "stop highlighting"], "a": "Press Esc in Normal mode. LazyVim clears the search highlight for you.", "keys": "Esc", "vscode": "Esc"}, {"id": "split", "cat": "Windows", "q": ["split window", "split screen", "side by side", "open two files", "split vertically", "split horizontally"], "a": "Space | splits the window side by side and Space - splits it top and bottom. Space w d closes the current split.", "keys": "<leader>| / <leader>-", "vscode": "Ctrl+\\"}, {"id": "window-move", "cat": "Windows", "q": ["move between windows", "switch split", "go to other window", "focus sidebar", "move between panes"], "a": "Ctrl+H, Ctrl+J, Ctrl+K and Ctrl+L move to the window on the left, below, above and right. The long form is Ctrl+W then h, j, k or l.", "keys": "Ctrl+H/J/K/L", "vscode": "Ctrl+1 / Ctrl+2"}, {"id": "terminal", "cat": "Tools", "q": ["open terminal", "toggle terminal", "run a command", "integrated terminal"], "a": "Space f t opens a terminal. Inside it you're typing into the shell; press Ctrl+\\ then Ctrl+N to get back to Normal mode so you can scroll and copy.", "keys": "<leader>ft", "vscode": "Ctrl+`"}, {"id": "command-palette", "cat": "Tools", "q": ["command palette", "run a command", "list commands", "all commands"], "a": "Space s C searches every command. Typing : opens the command line for Ex commands like :w or :set.", "keys": "<leader>sC or :", "vscode": "Ctrl+Shift+P"}, {"id": "keymaps", "cat": "Tools", "q": ["show keybindings", "what keys are there", "list shortcuts", "cheat sheet", "keymaps"], "a": "Press Space and wait: which-key shows every leader shortcut, grouped. Space s k searches all keymaps.", "keys": "<leader> (wait), <leader>sk", "vscode": "Ctrl+K Ctrl+S"}, {"id": "help", "cat": "Tools", "q": ["help", "documentation", "read the docs", "manual"], "a": ":h followed by a topic opens Neovim's built-in help, for example :h motion. Space s h searches all help pages.", "keys": ":h topic", "vscode": "F1"}, {"id": "tutor", "cat": "Tools", "q": ["tutorial", "learn vim", "practice", "lessons", "vimtutor"], "a": ":NvsTutor opens the nvs.ide lessons, which you practise in a real buffer. :Tutor opens Neovim's own full tutorial.", "keys": ":NvsTutor", "vscode": "(Get Started page)", "try": "NvsTutor"}, {"id": "stage", "cat": "nvs.ide", "q": ["change stage", "more vim", "less vim", "vscode keys", "keybinding stage", "turn off vim keys"], "a": ":NvsStage 1 gives you VS Code keys, 2 is Hybrid, 3 is Modal with a safety net, 4 is pure Neovim. The coach hints go quiet at Stage 4.", "keys": ":NvsStage 1-4", "vscode": "(Keymap extensions)", "try": "NvsStage"}, {"id": "definition", "cat": "Code", "q": ["go to definition", "jump to definition", "where is this defined", "open declaration"], "a": "gd jumps to the definition of the symbol under the cursor. Ctrl+O brings you back.", "keys": "gd", "vscode": "F12"}, {"id": "references", "cat": "Code", "q": ["find references", "find usages", "who calls this", "where is this used"], "a": "gr lists every reference to the symbol under the cursor.", "keys": "gr", "vscode": "Shift+F12"}, {"id": "rename", "cat": "Code", "q": ["rename symbol", "rename variable", "rename function", "refactor name"], "a": "Space c r renames the symbol under the cursor everywhere the language server knows about.", "keys": "<leader>cr", "vscode": "F2"}, {"id": "code-action", "cat": "Code", "q": ["quick fix", "code action", "fix this error", "lightbulb"], "a": "Space c a shows code actions and quick fixes for the cursor position.", "keys": "<leader>ca", "vscode": "Ctrl+."}, {"id": "hover", "cat": "Code", "q": ["show documentation", "hover info", "what is this function", "show type"], "a": "K shows the documentation and type of the symbol under the cursor.", "keys": "K", "vscode": "Hover / Ctrl+K Ctrl+I"}, {"id": "format", "cat": "Code", "q": ["format file", "format code", "prettier", "auto format", "beautify"], "a": "Space c f formats the file. LazyVim also formats on save; Space u f turns that off.", "keys": "<leader>cf", "vscode": "Shift+Alt+F"}, {"id": "diagnostics", "cat": "Code", "q": ["show errors", "next error", "problems panel", "list warnings", "diagnostics"], "a": "]d and [d jump to the next and previous problem. Space x x opens a list of every problem (Trouble). Space c d shows the full message for the current line.", "keys": "]d [d, <leader>xx", "vscode": "F8 / Ctrl+Shift+M"}, {"id": "completion", "cat": "Code", "q": ["autocomplete", "accept suggestion", "completion menu", "intellisense", "code completion"], "a": "Suggestions appear as you type. Ctrl+N and Ctrl+P (or the arrow keys) move through them, Enter accepts, and Ctrl+Space opens the menu by hand. If a local model is on, grey ghost text shows a longer suggestion; Alt+A accepts it.", "keys": "Enter, Ctrl+N/P, Ctrl+Space", "vscode": "Tab / Enter"}, {"id": "snippets", "cat": "Code", "q": ["snippets", "insert snippet", "expand snippet"], "a": "Snippets appear in the completion menu with a snippet icon. Accept one with Enter, then Tab jumps to the next placeholder.", "keys": "Enter, Tab", "vscode": "Tab"}, {"id": "fold", "cat": "Code", "q": ["fold code", "collapse function", "unfold", "hide block"], "a": "za toggles the fold under the cursor, zM closes all folds and zR opens them all.", "keys": "za / zM / zR", "vscode": "Ctrl+Shift+["}, {"id": "git-ui", "cat": "Git", "q": ["git", "commit", "git status", "stage changes", "push", "lazygit", "source control"], "a": "Space g g opens lazygit, a full git interface: space stages a file, c commits, P pushes. (lazygit has to be installed.)", "keys": "<leader>gg", "vscode": "Ctrl+Shift+G"}, {"id": "git-hunk", "cat": "Git", "q": ["stage a hunk", "stage these lines", "next change", "git blame", "who changed this line"], "a": "]h and [h jump between changed blocks, Space g h s stages the block under the cursor and Space g h b shows who last changed the line.", "keys": "]h, <leader>ghs, <leader>ghb", "vscode": "Gutter clicks / GitLens"}, {"id": "plugins", "cat": "nvs.ide", "q": ["install a plugin", "add extension", "manage plugins", "update plugins", "lazy"], "a": ":Lazy opens the plugin manager (U updates everything). :LazyExtras switches on ready-made bundles such as language support. In the nvs.ide window, the Plugins view does the same with buttons.", "keys": ":Lazy, :LazyExtras", "vscode": "Ctrl+Shift+X", "try": "Lazy"}, {"id": "language", "cat": "nvs.ide", "q": ["add language support", "python support", "rust support", "typescript support", "install language server", "mason"], "a": ":LazyExtras has a lang section (lang.python, lang.rust, lang.typescript and more); press x on one to enable it. :Mason installs individual servers, linters and formatters.", "keys": ":LazyExtras, :Mason", "vscode": "Install the language extension", "try": "LazyExtras"}, {"id": "settings", "cat": "nvs.ide", "q": ["change settings", "open settings", "set an option", "turn on line numbers", "relative numbers"], "a": ":set changes an option for now, for example :set relativenumber! toggles relative numbers. To keep it, add it to lua/config/options.lua, or use the Settings screen in the nvs.ide window, which writes that file for you.", "keys": ":set option", "vscode": "Ctrl+,"}, {"id": "theme", "cat": "nvs.ide", "q": ["change theme", "color scheme", "dark theme", "change colors"], "a": "Space u C previews and switches colour schemes. nvs.ide ships with necronomicon.", "keys": "<leader>uC", "vscode": "Ctrl+K Ctrl+T"}, {"id": "ollama", "cat": "nvs.ide", "q": ["use ollama", "local model", "ai assistant", "ask the ai", "ai completion", "chatbot"], "a": "Turn it on with :NvsOllama on (or Settings > Local AI). nvs.ide talks to Ollama at http://localhost:11434. The Ask window uses it when none of its written answers match, and ghost-text completion uses it for longer suggestions. If Ollama runs on another machine, forward port 11434 over SSH and keep the default address.", "keys": ":NvsOllama on", "vscode": "(Copilot)"}, {"id": "ask", "cat": "nvs.ide", "q": ["ask a question", "how do i", "how to", "ask"], "a": "Space ? (or F1 at Stages 1 to 3) opens Ask. Type a question in plain words, like 'delete a line' or 'split the screen'.", "keys": "<leader>?", "vscode": "(search the web)"}]};
+const TUTOR = {"text": "# Welcome to the nvs.ide lessons\n\nThese lessons are for people who know VS Code and want Vim's keys. You practise\nin this buffer, and nothing here is saved, so experiment freely.\n\nWhen a line has a ✗ at the left, change it to match the instructions. The ✗\nturns into ✓ when it's right. If you mess something up, press <Esc>\nthen u to undo.\n\nStuck at any point? Press <Space>? and ask in plain words, like\n\"delete a line\".\n\nPress j a few times to scroll down to Lesson 1.\n\n# Lesson 1: MOVE WITHOUT THE ARROW KEYS\n\n** h left, j down, k up, l right. **\n\n          k\n      h       l\n          j\n\nYour right hand rests on these keys already, so moving never means reaching\nfor the arrows.\n\nPut a number in front to repeat a move. 5j goes down five lines. The\nnumbers down the left side count the distance from your line, so you can read\nthe number off and type it.\n\nTry it: jump down to Lesson 2 with a count.\n\n# Lesson 2: MODES\n\nVS Code has one mode: you type and text appears. Vim has a few:\n\n  Normal mode   keys are commands (move, delete, copy). You start here.\n  Insert mode   keys type text, like VS Code.\n  Visual mode   you select text, then act on it.\n\nThe status bar shows the mode. i enters Insert mode before the cursor\nand <Esc> always takes you back to Normal mode.\n\nPut the cursor on the line below, after \"missing\", press a to append,\ntype \" word\", then press <Esc>.\n\nThere is one missing\n\n# Lesson 3: DELETING\n\n** x deletes a character. dd deletes a line. dw deletes a word. **\n\nPut the cursor on each doubled letter and press x:\n\nThe ccow jumpedd over thhe moon.\n\nDelete the whole next line with dd:\n\nDelete this line with dd.\n\nDelete the extra words with dw on each one:\n\nThis sentence has extra extra words words in it.\n\nVS Code users: dd is Ctrl+Shift+K. At Stages 1 to 3 both work.\n\n# Lesson 4: CHANGING\n\n** ciw changes the word under the cursor. **\n\nc means change, iw means inner word. It deletes the word and leaves\nyou in Insert mode to type the new one. Change \"red\" to \"green\":\n\nThe grass is red.\n\nThe same pattern works on other things: ci\" changes inside quotes and\nci( inside parentheses. Change what's inside the quotes to hello:\n\nprint(\"goodbye\")\n\nPress . to repeat your last change somewhere else. That's Vim's\nanswer to multiple cursors.\n\n# Lesson 5: COPY, PASTE, UNDO\n\n  yy   copies the line       (VS Code: Ctrl+C with nothing selected)\n  p    pastes below          (Ctrl+V)\n  u    undoes                (Ctrl+Z)\n  <C-r> redoes               (Ctrl+Y)\n\nCopy the line below with yy and paste it with p so there\nare two of them:\n\nCopy me.\n\n# Lesson 6: SEARCH AND SAVE\n\nType /moon and Enter to find \"moon\" in Lesson 3. n jumps to\nthe next match and N to the previous one.\n\nType :w and Enter to save a real file (this lesson won't save). In\nnvs.ide, Ctrl+S saves too.\n\n# Lesson 7: THE LEADER KEY\n\nMost nvs.ide and LazyVim commands start with Space, called the leader key.\nPress <Space> and wait: a menu shows what comes next.\n\n  <Space><Space>  find a file         (VS Code: Ctrl+P)\n  <Space>/        search the project  (Ctrl+Shift+F)\n  <Space>e        file explorer       (Ctrl+B)\n  <Space>gg       git                 (Ctrl+Shift+G)\n  <Space>?        ask how to do something\n  <Space>h        harpoon: your pinned files\n\n# Lesson 8: CODE\n\nWith a language server running (LazyVim sets them up):\n\n  gd         go to definition     (F12)\n  gr         find references      (Shift+F12)\n  K          show documentation   (hover)\n  <Space>cr  rename symbol        (F2)\n  <Space>ca  quick fix            (Ctrl+.)\n\nSuggestions pop up as you type in Insert mode. <C-n> and <C-p> move\nthrough them and Enter accepts.\n\n# Lesson 9: YOUR STAGE\n\nnvs.ide eases you in. :NvsStage picks how much Vim you want:\n\n  1  VS Code keys, no modes\n  2  Hybrid: files open in Insert mode, VS Code shortcuts work\n  3  Normal mode first, with Ctrl+S, Ctrl+Z, Ctrl+P and friends kept\n  4  Pure Neovim\n\nWhen you're comfortable with these lessons, try the next stage. For the full\nVim course, run :Tutor.", "expect": [{"orig": "There is one missing", "want": "There is one missing word"}, {"orig": "The ccow jumpedd over thhe moon.", "want": "The cow jumped over the moon."}, {"orig": "This sentence has extra extra words words in it.", "want": "This sentence has extra words in it."}, {"orig": "The grass is red.", "want": "The grass is green."}, {"orig": "print(\"goodbye\")", "want": "print(\"hello\")"}]};
+const SRC = {
+'bridge.lua': { path:'runtime/lua/nvs/bridge.lua', lang:'lua', text:
+`-- bridge.lua: streams workbench state from nvim to the shell
+local M = {}
+
+local function notify(event, payload)
+  vim.rpcnotify(vim.g.nvs_channel, "nvs", event, payload)
+end
+
+function M.setup()
+  local group = vim.api.nvim_create_augroup("nvs_bridge", { clear = true })
+
+  vim.api.nvim_create_autocmd("DiagnosticChanged", {
+    group = group,
+    callback = function(args)
+      notify("problems", vim.diagnostic.get(args.buf))
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("LspAttach", {
+    group = group,
+    callback = function(args)
+      local client = vim.lsp.get_client_by_id(args.data.client_id)
+      notify("lsp", { buf = args.buf, name = client.name })
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("OptionSet", {
+    group = group,
+    callback = function(args)
+      notify("setting", { name = args.match, value = vim.v.option_new })
+    end,
+  })
+end
+
+return M` },
+'bridge.rs': { path:'shell/src/bridge.rs', lang:'rust', text:
+`// bridge.rs: receives nvs notifications from the embedded nvim
+use rmpv::Value;
+
+use crate::workbench::{Panel, Workbench};
+
+pub fn handle_notify(wb: &mut Workbench, event: &str, payload: Value) {
+    match event {
+        "problems" => wb.panel(Panel::Problems).replace(payload),
+        "lsp" => wb.status.set_lsp(payload),
+        "setting" => wb.settings.sync_from_nvim(payload),
+        "tabs" => wb.tabs.sync(payload),
+        _ => log::debug!("unhandled nvs event {event}"),
+    }
+}` },
+'necronomicon.lua': { path:'runtime/colors/necronomicon.lua', lang:'lua', text:
+`-- colors/necronomicon.lua: the same palette the shell chrome uses
+local p = {
+  void = "#05070a", crypt = "#0a0e14", stone = "#1a2430",
+  bone = "#d8d4c4", ash = "#5c6470", spectral = "#62e670",
+  corpse = "#4fb8d6", necrotic = "#9d6bd8", viscera = "#b8453a",
+  gold = "#d4a843",
+}
+
+vim.g.colors_name = "necronomicon"
+local hl = function(group, spec) vim.api.nvim_set_hl(0, group, spec) end
+
+hl("Normal", { fg = p.bone, bg = p.crypt })
+hl("Comment", { fg = p.ash, italic = true })
+hl("Keyword", { fg = p.necrotic })
+hl("String", { fg = p.spectral })
+hl("Function", { fg = p.corpse })
+hl("DiagnosticError", { fg = p.viscera })
+hl("DiagnosticWarn", { fg = p.gold })` },
+'nvs-ide.tutor': { path:'runtime/tutor/nvs-ide.tutor', lang:'tutor', text: TUTOR.text }
+};
+const FILES = {};
+function mkFile(name, f){ FILES[name] = { name, path:f.path, lang:f.lang, lines:f.text.split('\n'), row:0, col:0, dirty:false, undo:[], bps:new Set(), changed:new Set(), ro:!!f.ro }; }
+for (const [n,f] of Object.entries(SRC)) mkFile(n,f);
+FILES['bridge.lua'].row = 4; FILES['bridge.lua'].col = 6; FILES['bridge.lua'].bps.add(4);
+
+const TREE = { d:'nvs.ide', kids:[
+  { d:'runtime', kids:[ 'init.lua', { d:'lua', kids:[ { d:'config', kids:['lazy.lua','options.lua','keymaps.lua'] }, { d:'nvs', kids:['ask.lua','bridge.lua','coach.lua','ollama.lua','stages.lua','state.lua'] }, { d:'plugins', kids:['nvs.lua'] } ] }, { d:'colors', kids:['necronomicon.lua'] }, { d:'kb', kids:['ask.json'] }, { d:'tutor', kids:['nvs-ide.tutor'] } ] },
+  { d:'shell', kids:[ { d:'src', kids:['main.rs','bridge.rs','grid.rs',{ d:'workbench', kids:['mod.rs','palette.rs','settings.rs','coach.rs'] }] }, 'Cargo.toml' ] },
+  { d:'exthost', kids:[ { d:'src', kids:['api.ts','openvsx.ts','lsp-proxy.ts'] }, 'package.json' ] },
+  { d:'docs', kids:[ 'design.md', { d:'preview', kids:['index.html'] } ] },
+  { d:'scripts', kids:['try.ps1','build-preview.py'] },
+  'README.md'
+]};
+const ALLFILES = []; (function walk(n,p){ if (typeof n==='string') ALLFILES.push({ name:n, path:p+'/'+n }); else n.kids.forEach(k=>walk(k, p ? p+'/'+n.d : n.d)); })(TREE,'');
+
+const SKILLS = [
+  ['hjkl','h j k l','move by character'],['count','3j, 5x','repeat with a count'],['word','w b','move by word'],['line','0 $','line start and end'],
+  ['jump','gg G','top and bottom'],['insert','i a o A I','enter Insert mode'],['esc','Esc or jk','back to Normal'],['x','x','delete a character'],
+  ['dd','dd','delete a line'],['u','u','undo'],['visual','v V','select'],['search','/ n N','search'],
+  ['cmd',':w :set','command line'],['gcc','gcc','comment a line'],['leader','Space','leader menu'],['ctrlw','Ctrl+H J K L','move between panes'],['complete','Enter / Alt+A','accept a suggestion'],['ask','F1 / Space ?','ask how']
+];
+
+/* ================= state ================= */
+const S = {
+  mode:'INSERT', view:'explorer', panel:'terminal', sidebar:true, panelOpen:true,
+  tabs:['welcome','bridge.lua','bridge.rs','settings'], active:'bridge.lua',
+  open:new Set(['nvs.ide','nvs.ide/runtime','nvs.ide/runtime/lua','nvs.ide/runtime/lua/nvs','nvs.ide/runtime/tutor']),
+  cfg:Object.fromEntries(SET.filter(s=>s.t!=='keytable' && s.t!=='aitest').map(s=>[s.id,s.def])),
+  cmp:null, ghost:'', chat:[], askq:'', welcomed:false,
+  staged:new Set(['shell/src/bridge.rs']), anchor:0, pending:'', count:'', debugging:false,
+  search:'rpcnotify', pq:'', psrc:'all', ptab:'installed', commit:'', stq:'', scat:'Transition', scope:'user', imported:false,
+  skills:{}, seen:{}, arrows:0, lastJ:0, lastSearch:'', leader:false, sideSel:0, focus:'editor'
+};
+const st = () => S.cfg.stage;
+const cur = () => FILES[S.active];
+const isCode = n => !!FILES[n];
+const hostRunning = () => S.cfg.exthost==='always' || (S.cfg.exthost==='demand' && PLUGS.some(p => p.src==='vsx' && p.tier==='t2' && p.inst));
+const leaderName = () => ({' ':'Space','\\':'\\',',':','})[S.cfg.leader];
+const LH = () => Math.round(S.cfg.fs*1.54);
+const insertLike = () => S.mode==='INSERT' || st()==='vscode';
+
+/* ================= highlighting ================= */
+const KW = {
+  lua:new Set('local function end return if then else elseif for in do while repeat until nil true false and or not'.split(' ')),
+  rust:new Set('use pub fn let mut match crate mod struct impl self Self as ref enum return if else for in while loop true false where'.split(' '))
+};
+function hl(line, lang, hs){
+  if (lang==='tutor') return line.startsWith('#') ? `<span class="t">${mark(esc(line),hs)}</span>` : line.startsWith('**') ? `<span class="s">${mark(esc(line),hs)}</span>` : mark(esc(line),hs);
+  const cm = lang==='rust' ? '//' : '--';
+  let ci = -1, q = false;
+  for (let i=0;i<line.length;i++){ const c=line[i]; if (c==='"' && line[i-1]!=='\\') q=!q; else if (!q && line.startsWith(cm,i)) { ci=i; break; } }
+  const code = ci<0 ? line : line.slice(0,ci), com = ci<0 ? '' : line.slice(ci);
+  const re = /"(?:[^"\\]|\\.)*"?|[A-Za-z_]\w*|\d+|\s+|./g; let m, out='';
+  while ((m = re.exec(code))) {
+    const t = m[0]; let cls = '';
+    if (t[0]==='"') cls='s';
+    else if (/^[A-Za-z_]/.test(t)) { const nx = code.slice(re.lastIndex).match(/^\s*(\S)/), nc = nx ? nx[1] : '';
+      if (KW[lang].has(t)) cls='k'; else if (nc==='(' || nc==='!') cls='f'; else if (/^[A-Z]/.test(t)) cls='t'; }
+    else if (/^\d/.test(t)) cls='n';
+    else if (/^[{}()\[\],;=:.<>&|+\-*\/#!?]$/.test(t)) cls='p';
+    out += cls ? `<span class="${cls}">${mark(esc(t),hs)}</span>` : mark(esc(t),hs);
+  }
+  return out + (com ? `<span class="c">${mark(esc(com),hs)}</span>` : '');
+}
+function mark(html, hs){
+  if (!hs) return html;
+  const e = esc(hs).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return html.replace(new RegExp(e, S.cfg.ignorecase ? 'gi' : 'g'), m => `<span class="hs">${m}</span>`);
+}
+
+/* ================= diagnostics & outline ================= */
+function diagFor(f){
+  const out = [];
+  if (f.lang==='lua') f.lines.forEach((l,i)=>{ const c = l.indexOf('client.name'); if (c>=0 && !/client and client\.name/.test(l)) out.push({ row:i, col:c, msg:'Need check nil. [need-check-nil]', src:'lua_ls' }); });
+  return out;
+}
+const allDiags = () => Object.values(FILES).filter(f=>f.name!=='settings.lua').flatMap(f => diagFor(f).map(d => ({...d, file:f.name})));
+function outline(f){
+  const out = [];
+  f.lines.forEach((l,i)=>{ let m;
+    if ((m = l.match(/^\s*(?:local\s+)?function\s+([\w.:]+)/))) out.push({ row:i, name:m[1], kind:'fn' });
+    else if ((m = l.match(/^\s*(?:pub\s+)?fn\s+(\w+)/))) out.push({ row:i, name:m[1], kind:'fn' });
+    else if ((m = l.match(/^local\s+(\w+)\s*=/))) out.push({ row:i, name:m[1], kind:'var' });
+    else if (f.lang==='tutor' && (m = l.match(/^# (Lesson \d+: .*)/i))) out.push({ row:i, name:m[1].toLowerCase(), kind:'var' });
+  });
+  return out;
+}
+
+/* ================= messages & coach ================= */
+function msg(text, kind=''){
+  const box = $('msgs'), el = document.createElement('div');
+  el.className = 'msg ' + kind; el.textContent = text; box.appendChild(el);
+  while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(()=>el.remove(), 4500);
+}
+function coach(key, text){
+  if (!S.cfg.coach || st()==='neovim') return;
+  const n = S.seen[key] = (S.seen[key]||0) + 1, lim = { always:1e9, three:3, once:1 }[S.cfg.coachFreq];
+  if (n > lim) return;
+  const box = $('msgs'), el = document.createElement('div');
+  el.className = 'msg coach'; el.innerHTML = `<small>THE VIM WAY</small><span>${esc(text)}</span>`;
+  box.appendChild(el); while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(()=>el.remove(), 6500);
+}
+function skill(k){ S.skills[k] = (S.skills[k]||0) + 1; if (S.view==='learn' && S.sidebar) renderSide(); }
+
+/* ================= settings.lua (generated) ================= */
+function settingsLua(){
+  const out = ['-- settings.lua: kept in sync with the Settings screen.', '-- Changing a value here updates the screen, and the other way round.', ''];
+  CATS.forEach(c => {
+    const rows = SET.filter(s => s.c===c && s.vim);
+    if (!rows.length) return;
+    out.push(`-- ${c}`);
+    rows.forEach(s => s.vim(S.cfg[s.id]).split('\n').forEach(l => out.push(l)));
+    out.push('');
+  });
+  return out;
+}
+function syncSettingsFile(){
+  if (!FILES['settings.lua']) mkFile('settings.lua', { path:'lua/nvs/settings.lua', lang:'lua', text:'', ro:true });
+  const f = FILES['settings.lua']; f.lines = settingsLua(); f.row = Math.min(f.row, f.lines.length-1);
+}
+
+/* ================= Ask (same scoring as runtime/lua/nvs/ask.lua) ================= */
+const STOP = new Set(`a an the i me my to do does did how can could would should you your is are was be it
+  this that these those of in on at for with and or from by into onto what which when where why
+  vim neovim nvim please want get make use using way there some any just so like`.split(/\s+/));
+const toks = t => t.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean).map(w => KB.synonyms[w] || w).filter(w => !STOP.has(w));
+const DF = {};
+KB.entries.forEach(e => { e._p = e.q.map(toks); new Set(e._p.flat()).forEach(w => DF[w] = (DF[w]||0) + 1); });
+const idf = w => Math.log((KB.entries.length + 1) / ((DF[w]||0) + 0.5));
+function askSearch(q, limit=3){
+  const qt = toks(q); if (!qt.length) return [];
+  const qs = new Set(qt);
+  const res = KB.entries.map(e => {
+    let best = 0;
+    for (const ph of e._p) {
+      if (!ph.length) continue;
+      let hit = 0, total = 0, cover = 0;
+      ph.forEach(w => { total += idf(w); if (qs.has(w)) hit += idf(w); });
+      qt.forEach(w => { if (ph.includes(w)) cover++; });
+      best = Math.max(best, 0.6*(hit/total) + 0.4*(cover/qt.length) + 0.005*cover);
+    }
+    return { e, score:best };
+  }).filter(r => r.score > 0).sort((a,b) => b.score - a.score);
+  return res.slice(0, limit);
+}
+const ASK_THRESHOLD = 0.45;
+// "Try it" for an answer: run its command, or put the user in the editor with the keys to press.
+function tryAnswer(id){
+  const e = KB.entries.find(x => x.id===id); if (!e) return;
+  if (e.try) { runEx(':' + e.try); return; }
+  if (!S.active || !isCode(S.active)) openFile('bridge.lua');
+  if (st()!=='vscode' && S.mode==='INSERT') S.mode = 'NORMAL';
+  renderLight(); focusCode();
+  const box = $('msgs'), el = document.createElement('div');
+  el.className = 'msg coach'; el.innerHTML = `<small>YOUR TURN</small><span>${esc(st()==='vscode' ? `At Stage 1 this is ${e.vscode}. Stage 2 lets you try ${e.keys}.` : `Press ${e.keys.replace(/<leader>/g, leaderName()+' ')} now.`)}</span>`;
+  box.appendChild(el); setTimeout(()=>el.remove(), 7000);
+}
+function askSubmit(q){
+  q = (q||'').trim(); if (!q) return;
+  const r = askSearch(q, 4);
+  S.chat.push({ q, r, ai: (!r[0] || r[0].score < ASK_THRESHOLD) && S.cfg.aiOn && S.cfg.aiAsk });
+  S.askq = ''; skill('ask');
+  showView('ask');
+  const sc = $('askscroll'); if (sc) sc.scrollTop = sc.scrollHeight;
+  const inp = $('askq'); if (inp) inp.focus();
+}
+function askCard(m){
+  const best = m.r[0], good = best && best.score >= ASK_THRESHOLD;
+  const L = s => esc(s.replace(/<leader>/g, leaderName()+' '));
+  let h = `<div class="aq">${esc(m.q)}</div>`;
+  if (good) {
+    const e = best.e;
+    h += `<div class="aa"><b>${esc(e.q[0].replace(/^./, c=>c.toUpperCase()).replace(/i/g,'I'))}</b>`
+      + `<div class="ak"><span>Vim</span><code>${L(e.keys)}</code></div><div class="ak"><span>VS Code</span><code class="vs">${esc(e.vscode)}</code></div>`
+      + `<p>${esc(e.a)}</p><div class="chips"><button class="btn go" type="button" data-try="${e.id}">${e.try ? 'Run :' + esc(e.try) : 'Try it'}</button>`
+      + m.r.slice(1).filter(x=>x.score>0.3).map(x => `<button class="btn" type="button" data-ask="${esc(x.e.q[0])}">${esc(x.e.q[0])}</button>`).join('') + `</div></div>`;
+  } else if (m.ai) {
+    h += `<div class="aa ai"><b>Asking ${esc(S.cfg.aiChat)}</b><p>No written answer matched, so nvs.ide sends the question to the local model at ${esc(S.cfg.aiUrl)}, with the closest written answers as context. The answer appears here, and any : command it suggests gets a Run button.</p><p class="dim">This preview has no model connected, so no answer will arrive.</p></div>`;
+  } else {
+    h += `<div class="aa"><b>No written answer matches that well</b>` + (m.r.length ? `<p>Closest topics:</p><div class="chips">${m.r.map(x => `<button class="btn" type="button" data-ask="${esc(x.e.q[0])}">${esc(x.e.q[0])}</button>`).join('')}</div>` : '')
+      + `<p class="dim">Turn on Local AI in Settings to get free-form answers from a model on your machine.</p><div class="chips"><button class="btn" type="button" data-setcat="Local AI">Local AI settings</button></div></div>`;
+  }
+  return h;
+}
+
+/* ================= completion menu and ghost text ================= */
+const API = {
+  lua: [
+    ['vim.api.nvim_create_autocmd','f','(event, opts) → integer','Create an autocommand for one or more events.'],
+    ['vim.api.nvim_create_augroup','f','(name, opts) → integer','Create or get an autocommand group.'],
+    ['vim.api.nvim_set_hl','f','(ns_id, name, val)','Set a highlight group.'],
+    ['vim.api.nvim_buf_get_lines','f','(buf, start, end, strict) → string[]','Get lines from a buffer.'],
+    ['vim.api.nvim_get_current_buf','f','() → integer','The current buffer.'],
+    ['vim.keymap.set','f','(mode, lhs, rhs, opts)','Define a key mapping. Modes: "n" Normal, "i" Insert, "x" Visual.'],
+    ['vim.keymap.del','f','(mode, lhs, opts)','Remove a key mapping.'],
+    ['vim.notify','f','(msg, level, opts)','Show a notification.'],
+    ['vim.rpcnotify','f','(channel, method, ...)','Send an RPC notification to a channel, such as the nvs.ide shell.'],
+    ['vim.diagnostic.get','f','(bufnr, opts) → Diagnostic[]','Diagnostics for a buffer.'],
+    ['vim.diagnostic.config','f','(opts)','Configure how diagnostics are shown.'],
+    ['vim.lsp.get_client_by_id','f','(id) → Client?','Get an LSP client. May return nil.'],
+    ['vim.lsp.buf.format','f','(opts)','Format the buffer with the language server.'],
+    ['vim.schedule','f','(fn)','Run fn on the main loop soon.'],
+    ['vim.fn.stdpath','f','(what) → string','Standard paths: "config", "data", "state", "cache".'],
+    ['vim.json.encode','f','(value) → string','Encode a Lua value as JSON.'],
+    ['vim.json.decode','f','(str) → any','Decode JSON into Lua values.'],
+    ['vim.opt','v','Option object','Set options, as in vim.opt.number = true.'],
+    ['vim.g','v','Global variables','For example vim.g.mapleader = " ".'],
+    ['vim.log.levels.INFO','v','integer','Log level for vim.notify.'],
+    ['local function','s','snippet','local function name()','local function name()'],
+    ['for ipairs','s','snippet','for _, v in ipairs(list) do','for _, v in ipairs(list) do'],
+    ['require','s','snippet','local mod = require("module")','local mod = require("module")'],
+  ],
+  rust: [
+    ['wb.panel','f','(Panel) → &mut PanelView','Get a workbench panel.'],
+    ['wb.status','v','StatusBar','The status bar.'],
+    ['wb.tabs','v','TabStrip','The tab strip.'],
+    ['wb.settings','v','SettingsModel','The settings model shared with the Settings screen.'],
+    ['log::debug!','f','macro','Log at debug level.'],
+    ['Value','t','rmpv::Value','A MessagePack value from nvim.'],
+    ['Panel::Problems','v','Panel','The Problems panel.'],
+  ],
+  tutor: []
+};
+const KIND = { f:['f','lsp'], v:['v','lsp'], t:['t','lsp'], k:['k','keyword'], s:['s','snippet'], w:['w','buffer'] };
+function cmpItems(f, prefix){
+  const lp = prefix.toLowerCase(), out = [], seen = new Set([prefix]);
+  const add = (label, kind, detail, doc, insert) => { if (seen.has(label)) return; seen.add(label); out.push({ label, kind, detail, doc, insert }); };
+  (API[f.lang]||[]).forEach(a => { if (a[0].toLowerCase().startsWith(lp)) add(a[0], a[1], a[2], a[3], a[4]); });
+  if (S.cfg.snippets === false) for (let i=out.length-1;i>=0;i--) if (out[i].kind==='s') out.splice(i,1);
+  if (KW[f.lang]) [...KW[f.lang]].forEach(w => { if (w.startsWith(lp) && w!==prefix) add(w, 'k', 'keyword', ''); });
+  if (!prefix.includes('.')) {
+    const words = new Set();
+    Object.values(FILES).filter(x => x.lang===f.lang).forEach(x => x.lines.forEach((l,i) => { if (x===f && i===f.row) return; (l.match(/[A-Za-z_]\w{3,}/g)||[]).forEach(w => words.add(w)); }));
+    [...words].sort().forEach(w => { if (w.toLowerCase().startsWith(lp)) add(w, 'w', 'buffer', ''); });
+  }
+  return out.slice(0, 8);
+}
+function updateCmp(force){
+  const f = cur(); S.cmp = null;
+  if (!f || f.ro || !insertLike() || (!S.cfg.cmpAuto && !force)) return;
+  const before = f.lines[f.row].slice(0, f.col), m = before.match(/[A-Za-z_][\w.:!]*$/);
+  const prefix = m ? m[0] : '';
+  if (!force && prefix.replace(/[.:]/g,'').length < 2) return;
+  const items = cmpItems(f, prefix);
+  if (items.length) S.cmp = { items, sel:0, prefix };
+}
+function acceptCmp(i){
+  const f = cur(), it = S.cmp.items[i==null ? S.cmp.sel : i], l = f.lines[f.row], n = S.cmp.prefix.length;
+  const text = it.insert || it.label;
+  if (it.insert) { const ind = l.match(/^\s*/)[0]; f.lines[f.row] = ind + text + l.slice(f.col); f.col = ind.length + text.length; }
+  else { f.lines[f.row] = l.slice(0, f.col-n) + text + l.slice(f.col); f.col += text.length - n; }
+  touch(); S.cmp = null; skill('complete'); updateGhost(); renderLight();
+}
+const GHOSTS = {
+  lua: [
+    [/vim\.keymap\.set\($/, '"n", "<leader>x", function() end, { desc = "" })'],
+    [/vim\.notify\($/, '"Saved", vim.log.levels.INFO, { title = "nvs.ide" })'],
+    [/vim\.api\.nvim_create_autocmd\($/, '"BufWritePost", {'],
+    [/^\s*local ok, $/, 'mod = pcall(require, "nvs.ask")'],
+    [/name = client\.name$/, ' or "unknown"'],
+    [/^\s*if not \w+ then$/, ' return end'],
+  ],
+  rust: [
+    [/log::debug!\($/, '"bridge event {event}");'],
+    [/=> wb\.$/, 'status.set_lsp(payload),'],
+  ],
+  tutor: []
+};
+function updateGhost(){
+  S.ghost = '';
+  const f = cur();
+  if (!f || !S.cfg.aiOn || !S.cfg.aiGhost || !insertLike() || f.col !== f.lines[f.row].length) return;
+  const before = f.lines[f.row];
+  for (const [re, text] of (GHOSTS[f.lang]||[])) if (re.test(before)) { S.ghost = text; return; }
+}
+function acceptGhost(lineOnly){
+  const t = S.ghost; if (!t) return;
+  insertText(t); S.ghost = ''; skill('complete'); renderLight();
+  if (lineOnly) return;
+}
+
+/* ================= tutor checks (from runtime/tutor/nvs-ide.tutor.json) ================= */
+function tutorMark(line){
+  for (const x of TUTOR.expect) {
+    if (line === x.want) return '<i class="tk ok" title="Done"></i>';
+    if (line.slice(0,5) === x.orig.slice(0,5)) return '<i class="tk bad" title="Not done yet"></i>';
+  }
+  return '';
+}
+
+/* ================= welcome ================= */
+const WELCOME = [
+  ['vscode',"I'm coming from VS Code",'Everything works the way you know. Hints show the Vim way as you go.'],
+  ['hybrid','I know a little Vim','Files open ready to type and your shortcuts still work. Esc gives you Normal mode.'],
+  ['safety','I use Vim, keep a few safety nets','Normal mode first. Ctrl+S, Ctrl+Z, Ctrl+P and friends stay.'],
+  ['neovim',"I'm a Neovim user",'Pure LazyVim with your config. No hints.']
+];
+function renderWelcome(){
+  $('ed').innerHTML = `<div class="crumbs">Welcome</div><div class="ptabv" id="ptabv" tabindex="0"><div class="wel">`
+    + `<h2>Welcome to nvs.ide</h2><p>Neovim with LazyVim underneath, and as much hand-holding as you want on top. Where are you coming from? You can change this any time with <code>:NvsStage</code>.</p>`
+    + `<div class="welgrid">${WELCOME.map((w,i) => `<button type="button" class="stagecard ${st()===w[0]?'on':''}" data-stageset="${w[0]}"><span class="n">${i+1}</span><b>${esc(w[1])}</b><span>${esc(w[2])}</span></button>`).join('')}</div>`
+    + `<div class="pbox"><h4>Next steps</h4><div class="chips"><button class="btn go" type="button" data-open="nvs-ide.tutor">Start the lessons</button><button class="btn" type="button" data-view="ask">Ask how to do something (F1)</button><button class="btn" type="button" id="import">Import VS Code settings</button><button class="btn" type="button" data-setcat="Local AI">Set up a local model</button></div></div>`
+    + `<p class="dim">In the real editor this is a short menu on first launch (:NvsWelcome brings it back).</p></div></div>`;
+}
+
+/* ================= rendering ================= */
+function tabTitle(n){ if (n==='welcome') return 'Welcome'; if (n==='settings') return 'Settings'; if (n==='nvs-ide.tutor') return ':Tutor'; if (n.startsWith('plug:')) return PL[n.slice(5)].nm; return n; }
+function tabIcon(n){
+  if (n==='settings') return px('gear',1,'spectral');
+  if (n==='welcome') return px('logo',1,'spectral');
+  if (n.startsWith('plug:')) return px('pkg',1, PL[n.slice(5)].src!=='vsx'?'spectral':'corpse');
+  const f = FILES[n]; return px('file',1, f && f.lang==='rust' ? 'gold' : f && f.lang==='tutor' ? 'corpse' : 'necrotic');
+}
+function renderTitle(){
+  $('logo').innerHTML = px('logo',2);
+  $('ttl').textContent = `nvs.ide  ${S.active ? (isCode(S.active) ? cur().path : tabTitle(S.active)) : 'no file'}  ~\\nvs.ide`;
+  $('wmin').innerHTML = px('min',1); $('wmax').innerHTML = px('max',1); $('wcls').innerHTML = px('x',1);
+}
+function gitChanges(){
+  const base = [{ path:'shell/src/bridge.rs', st:'M' }, { path:'docs/preview/index.html', st:'A' }];
+  Object.values(FILES).forEach(f => { if (f.dirty && !f.ro && f.lang!=='tutor' && !base.find(b=>b.path===f.path)) base.push({ path:f.path, st:'M' }); });
+  return base;
+}
+function renderAct(){
+  const items = [['explorer','Explorer'],['search','Search'],['git','Source control'],['debug','Run and debug'],['plugins','Plugins'],['ask','Ask (F1)'],['learn','Learn']];
+  const gitN = gitChanges().length, upd = PLUGS.filter(p=>p.upd && p.inst).length;
+  $('act').innerHTML = items.map(([k,t]) =>
+    `<button type="button" data-view="${k}" title="${t}" aria-label="${t}" class="${S.sidebar && S.view===k?'on':''}">${px(k,2)}${k==='git'&&gitN?`<span class="badge">${gitN}</span>`:''}${k==='plugins'&&upd?`<span class="badge">${upd}</span>`:''}</button>`).join('')
+    + `<span class="sp"></span><button type="button" data-open="settings" title="Settings (Ctrl+,)" aria-label="Settings" class="${S.active==='settings'?'on':''}">${px('settings',2)}</button>`;
+}
+function treeHTML(node, path, depth){
+  if (typeof node === 'string') {
+    const col = node.endsWith('.lua') ? 'necrotic' : node.endsWith('.rs') ? 'gold' : node.endsWith('.ts') ? 'corpse' : 'bone-dim';
+    return `<div class="row nav ${S.active===node?'on':''}" data-file="${esc(node)}" style="padding-left:${10+depth*12+14}px">${px('file',1,col)}<span>${esc(node)}</span>${FILES[node]?'':'<span class="dim">not loaded</span>'}</div>`;
+  }
+  const p = path ? path + '/' + node.d : node.d, open = S.open.has(p);
+  return `<div class="row nav" data-dir="${esc(p)}" style="padding-left:${10+depth*12}px"><span class="tw">${open?'-':'+'}</span>${px('folder',1,'gold')}<span>${esc(node.d)}</span></div>`
+    + (open ? node.kids.map(k => treeHTML(k, p, depth+1)).join('') : '');
+}
+function plugMatches(p, q){
+  if (!q) return { hit:true };
+  const hay = (p.nm+' '+p.id+' '+p.ds).toLowerCase();
+  if (hay.includes(q)) return { hit:true };
+  const eq = (p.eq||[]).find(e => e.toLowerCase().includes(q));
+  if (eq) return { hit:true, via:eq };
+  return { hit:false };
+}
+function renderSide(){
+  const f = S.active && isCode(S.active) ? cur() : null;
+  let h = '';
+  if (S.view==='explorer') {
+    h = `<h3>Explorer <span style="letter-spacing:0;text-transform:none">j k l h</span></h3><div class="scroll">${treeHTML(TREE,'',0)}`
+      + `<div class="sec"><span>Outline</span><span>${f?esc(f.name):''}</span></div>`
+      + (f ? outline(f).map(o => `<div class="row nav" data-jump="${f.name}:${o.row}" style="padding-left:22px"><span class="${o.kind==='fn'?'f':'t'}">${o.kind==='fn'?'fn':'var'}</span><span>${esc(o.name)}</span><span class="dim">${o.row+1}</span></div>`).join('') : '<div class="note">No code file active</div>')
+      + `</div>`;
+  } else if (S.view==='search') {
+    const q = S.search.trim(); let res = '', n = 0;
+    if (q) for (const fl of Object.values(FILES)) {
+      if (fl.name==='settings.lua') continue;
+      const hits = fl.lines.map((l,i)=>({l,i})).filter(x => x.l.toLowerCase().includes(q.toLowerCase()));
+      if (!hits.length) continue; n += hits.length;
+      res += `<div class="row" style="color:var(--bone)">${px('file',1,'bone-dim')}<span>${esc(fl.name)}</span><span class="dim">${hits.length}</span></div>`
+        + hits.map(x => { const at = x.l.toLowerCase().indexOf(q.toLowerCase()), s = x.l.trim(), off = x.l.length - x.l.trimStart().length;
+            return `<div class="row nav" data-jump="${fl.name}:${x.i}:${at}" style="padding-left:26px"><span>${esc(s.slice(0,at-off))}<span style="color:var(--spectral);background:var(--stone)">${esc(s.slice(at-off,at-off+q.length))}</span>${esc(s.slice(at-off+q.length))}</span></div>`; }).join('');
+    }
+    h = `<h3>Search</h3><div class="pad"><input class="field" id="sq" value="${esc(S.search)}" placeholder="Search (ripgrep)" spellcheck="false" aria-label="Search files"></div>`
+      + `<div class="note">${q ? `${n} result${n===1?'':'s'} in the loaded files` : 'Type to search'}</div><div class="scroll">${res}</div>`;
+  } else if (S.view==='git') {
+    const ch = gitChanges(), sg = ch.filter(c=>S.staged.has(c.path)), un = ch.filter(c=>!S.staged.has(c.path));
+    const rowG = c => `<div class="row nav" data-stage="${esc(c.path)}" title="Enter or click to ${S.staged.has(c.path)?'unstage':'stage'}">${px('file',1,'bone-dim')}<span>${esc(c.path.split('/').pop())}</span><span class="dim">${esc(c.path.split('/').slice(0,-1).join('/'))}</span><span class="gs ${c.st}">${c.st}</span></div>`;
+    h = `<h3>Source control <span style="color:var(--spectral)">main</span></h3>`
+      + `<div class="pad"><input class="field" id="cmsg" value="${esc(S.commit)}" placeholder="Commit message" aria-label="Commit message"><button class="btn go" type="button" id="commit">Commit ${sg.length} staged</button></div>`
+      + `<div class="scroll"><div class="sec"><span>Staged</span><span>${sg.length}</span></div>${sg.map(rowG).join('')||'<div class="note">Nothing staged</div>'}`
+      + `<div class="sec"><span>Changes</span><span>${un.length}</span></div>${un.map(rowG).join('')||'<div class="note">Working tree clean</div>'}`
+      + `</div><div class="foot">gitoxide · <span style="color:var(--necrotic)">&lt;leader&gt;hs</span> stages a hunk in the editor</div>`;
+  } else if (S.view==='debug') {
+    const bps = Object.values(FILES).flatMap(fl => [...fl.bps].map(r => ({ f:fl.name, r })));
+    h = `<h3>Run and debug</h3><div class="pad"><div style="display:flex;gap:4px;align-items:center">`
+      + (S.debugging
+          ? `<button class="btn" type="button" id="dcont" title="Continue (F5)">${px('play',2,'spectral')}</button><button class="btn" type="button" id="dstep" title="Step over (F10)">${px('step',2)}</button><button class="btn" type="button" id="dstop" title="Stop">${px('stop',2,'viscera')}</button><span style="color:var(--gold);margin-left:6px">Paused on breakpoint</span>`
+          : `<button class="btn go" type="button" id="dstart">${px('play',2)} Start (F5)</button><span style="color:var(--bone-dim);margin-left:6px">osv via nvim-dap</span>`)
+      + `</div></div><div class="scroll">`
+      + `<div class="sec"><span>Variables</span></div>` + (S.debugging
+          ? `<div class="row"><span class="k">event</span><span class="s">"problems"</span></div><div class="row"><span class="k">payload</span><span style="color:var(--ash)">table: 2 items</span></div>`
+          : `<div class="note">Not running</div>`)
+      + `<div class="sec"><span>Call stack</span></div>` + (S.debugging
+          ? `<div class="row nav on" data-jump="bridge.lua:4"><span>notify</span><span class="dim">bridge.lua:5</span></div><div class="row nav" data-jump="bridge.lua:13"><span>callback</span><span class="dim">bridge.lua:14</span></div>`
+          : `<div class="note">Not running</div>`)
+      + `<div class="sec"><span>Breakpoints</span><span>${bps.length}</span></div>`
+      + (bps.map(b => `<div class="row nav" data-jump="${b.f}:${b.r}"><i class="bp"></i><span>${esc(b.f)}</span><span class="dim">${b.r+1}</span></div>`).join('') || '<div class="note">Press F9 on a line</div>')
+      + `</div>`;
+  } else if (S.view==='plugins') {
+    const q = S.pq.trim().toLowerCase();
+    let list = PLUGS.filter(p => S.psrc==='all' || (S.psrc==='vsx' ? p.src==='vsx' : p.src!=='vsx'));
+    if (S.ptab==='installed') list = list.filter(p => p.inst);
+    if (S.ptab==='extras') list = list.filter(p => p.src==='extra');
+    if (S.ptab==='browse') list = list.filter(p => !p.inst);
+    if (S.ptab==='updates') list = list.filter(p => p.inst && p.upd);
+    const rows = list.map(p => ({ p, m:plugMatches(p,q) })).filter(x => x.m.hit).sort((a,b) => (a.m.via && a.p.src==='nvim' ? -1 : 0) - (b.m.via && b.p.src==='nvim' ? -1 : 0));
+    const upd = PLUGS.filter(p=>p.inst&&p.upd).length;
+    h = `<h3>Plugins</h3><div class="pad">`
+      + `<div class="chips">${[['installed','Installed'],['extras','Extras'],['browse','Browse'],['updates',`Updates ${upd}`]].map(([k,t])=>`<button type="button" class="btn ${S.ptab===k?'on':''}" data-ptab="${k}">${t}</button>`).join('')}</div>`
+      + `<input class="field" id="pq" value="${esc(S.pq)}" placeholder="Search, or name a VS Code extension you miss" spellcheck="false" aria-label="Search plugins">`
+      + `<div class="chips">${[['all','All'],['nvim','Neovim'],['vsx','VS Code']].map(([k,t])=>`<button type="button" class="btn ${S.psrc===k?'on':''}" data-psrc="${k}">${t}</button>`).join('')}</div></div>`
+      + `<div class="scroll">` + (rows.map(({p,m},i) => (!q && p.grp && (i===0 || rows[i-1].p.grp!==p.grp) ? `<div class="prow grp" style="cursor:default;padding:4px 10px 0;border:0"><span class="grp">${esc(p.grp)}</span></div>` : '') + `<div class="prow nav ${S.active==='plug:'+p.id?'on':''}" data-plug="${esc(p.id)}"><span class="ico">${px('pkg',1, p.inst ? (p.src!=='vsx'?'spectral':'corpse') : 'ash')}</span><span class="nm">${esc(p.nm)}</span><span class="chips"><span class="tag ${p.src}">${({nvim:'NVIM',extra:'EXTRA',vsx:'VSX'})[p.src]}</span>${p.upd&&p.inst?'<span class="tag upd">UPDATE</span>':''}${p.inst&&!p.on?'<span class="tag off">OFF</span>':''}</span><span class="ds">${esc(p.ds)}</span>${m.via?`<span class="eq">Replaces ${esc(m.via)}</span>`:''}</div>`).join('')
+        || `<div class="note">${S.ptab==='installed' && q ? 'Not installed. Try Browse.' : 'Nothing matches.'}</div>`)
+      + `</div><div class="foot">LazyVim + lazy.nvim · extension host ${hostRunning()?'<span style="color:var(--spectral)">running</span>':'off'}</div>`;
+  } else if (S.view==='ask') {
+    const sugg = ['delete a line','split the screen','how do I exit vim','find a file','multiple cursors','rename a variable'];
+    h = `<h3>Ask <span style="letter-spacing:0;text-transform:none;color:${S.cfg.aiOn?'var(--spectral)':'var(--ash)'}">${KB.entries.length} answers · AI ${S.cfg.aiOn?'on':'off'}</span></h3>`
+      + `<div class="askscroll" id="askscroll">` + (S.chat.length ? S.chat.map(askCard).join('') : `<div class="note" style="padding:0">Ask in plain words, the way you'd search. Answers show the Vim keys, the VS Code keys you already know, and a Try it button.</div>`) + `</div>`
+      + `<div class="pad"><input class="field" id="askq" value="${esc(S.askq)}" placeholder="How do I…  (Enter)" spellcheck="false" aria-label="Ask a question">`
+      + `<div class="chips">${sugg.map(q => `<button class="btn" type="button" data-ask="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>`;
+  } else if (S.view==='learn') {
+    const used = SKILLS.filter(s => S.skills[s[0]]).length, si = STAGES.findIndex(s=>s[0]===st());
+    h = `<h3>Learn</h3><div class="scroll"><div class="pad">`
+      + STAGES.map((s,i) => `<button type="button" class="stagecard ${st()===s[0]?'on':''}" data-stageset="${s[0]}"><span class="n">${i+1}</span><b>${s[1]}</b><span>${s[2]}</span></button>`).join('')
+      + `</div><div class="sec"><span>Motions used this session</span><span>${used}/${SKILLS.length}</span></div>`
+      + SKILLS.map(s => { const n = S.skills[s[0]]||0; return `<div class="skill ${n?'':'zero'}" title="${esc(s[2])}"><span class="k">${esc(s[1])}</span><span class="bar"><i style="width:${Math.min(n,5)*20}%"></i></span><span class="c">${n}</span></div>`; }).join('')
+      + `<div class="pad" style="margin-top:6px">`
+      + (si<3 && used>=8 ? `<div style="color:var(--spectral)">You've used ${used} of the basics. Stage ${si+2} could be next.</div>` : `<div style="color:var(--ash)">${si===3 ? 'Pure Neovim. The coach is quiet.' : 'Click the editor and try the keys listed under the window.'}</div>`)
+      + `<button class="btn go" type="button" data-open="nvs-ide.tutor">Open :Tutor</button><button class="btn" type="button" data-setcat="Keys">Keybinding cheat sheet</button>`
+      + `<label class="chk"><input type="checkbox" data-set="coach" ${S.cfg.coach?'checked':''}> Coach hints</label>`
+      + `</div></div>`;
+  }
+  $('side').innerHTML = h;
+  if (S.focus==='side') markSide();
+}
+
+function renderTabs(){
+  $('main').classList.toggle('notabs', S.cfg.tabline==='0' || (S.cfg.tabline==='1' && S.tabs.length<2));
+  $('tabs').innerHTML = S.tabs.map(n => { const f = FILES[n];
+    return `<div class="tab ${S.active===n?'on':''}" data-tab="${esc(n)}">${tabIcon(n)}<span>${esc(tabTitle(n))}</span>${f&&f.dirty&&!f.ro?'<i class="dirty" title="Unsaved"></i>':''}<button class="x" type="button" data-close="${esc(n)}" aria-label="Close ${esc(tabTitle(n))}">${px('x',1)}</button></div>`;
+  }).join('') + '<span class="fill"></span>';
+}
+
+let chW = 8;
+function gutterW(f){
+  const sg = S.cfg.signcolumn==='yes' || (S.cfg.signcolumn==='auto' && (f.bps.size || diagFor(f).length || f.changed.size)) ? 2 : 0;
+  const nu = S.cfg.number || S.cfg.relative ? 5 : 0;
+  return { sg, nu, total: sg+nu };
+}
+function ghostHTML(f){
+  if (S.ghost) return `<span class="ghost">${esc(S.ghost)}</span>`;
+  if (S.cmp && S.cfg.cmpGhost) { const it = S.cmp.items[S.cmp.sel], t = it.insert ? '' : it.label; if (t.toLowerCase().startsWith(S.cmp.prefix.toLowerCase()) && f.col===f.lines[f.row].length) return `<span class="ghost">${esc(t.slice(S.cmp.prefix.length))}</span>`; }
+  return '';
+}
+function renderEditor(){
+  const ed = $('ed');
+  if (!S.active) { ed.innerHTML = `<div class="crumbs">&nbsp;</div><div class="welcome"><div class="big">nvs.ide</div><div>Open a file from the explorer, or press F1</div></div>`; return; }
+  if (S.active==='settings') return renderSettingsTab();
+  if (S.active==='welcome') return renderWelcome();
+  if (S.active.startsWith('plug:')) return renderPlugTab(PL[S.active.slice(5)]);
+  if (S.active==='settings.lua') syncSettingsFile();
+  const f = cur(), diags = diagFor(f), vs = S.mode==='VISUAL' ? [Math.min(S.anchor,f.row), Math.max(S.anchor,f.row)] : null;
+  const g = gutterW(f), hs = S.cfg.hlsearch ? S.lastSearch : '';
+  const sym = outline(f).filter(o => o.row <= f.row).pop();
+  let h = '';
+  f.lines.forEach((l,i) => {
+    const d = S.cfg.diagSigns || S.cfg.virtText ? diags.find(x => x.row===i) : null, bp = f.bps.has(i);
+    const num = !(S.cfg.number||S.cfg.relative) ? '' : (S.cfg.relative && i!==f.row ? Math.abs(i-f.row) : (S.cfg.number ? i+1 : 0));
+    const cls = ['ln']; if (i===f.row) { cls.push('cln'); if (S.cfg.cursorline) cls.push('cl'); }
+    if (vs && i>=vs[0] && i<=vs[1]) cls.push('sel');
+    if (S.debugging && f.name==='bridge.lua' && i===4) cls.push('stop');
+    const sign = f.lang==='tutor' ? tutorMark(l) : bp ? '<i class="bp"></i>' : d && S.cfg.diagSigns ? '<i class="ws">W</i>' : '';
+    const gc = S.cfg.gitSigns && f.changed.has(i) ? ' gc' : '';
+    let vt = '';
+    if (d && S.cfg.virtText) vt = `<span class="vt"><i class="sq"></i>${esc(d.msg)}</span>`;
+    else if (S.cfg.blame && i===f.row && !f.ro && f.lang!=='tutor') vt = `<span class="vt blame">${f.changed.has(i) ? 'You · not committed yet' : 'You, 2 days ago · stream workbench state to the shell'}</span>`;
+    h += `<div class="${cls.join(' ')}" data-row="${i}">${g.sg?`<span class="sg${gc}">${sign}</span>`:''}${g.nu?`<span class="nu">${num}</span>`:''}<span class="tx">${hl(l,f.lang,hs)}${i===f.row && insertLike() ? ghostHTML(f) : ''}</span>${vt}</div>`;
+  });
+  const ch = f.lines[f.row][f.col] || ' ';
+  const ccls = insertLike() ? 'cur bar' : S.mode==='VISUAL' ? 'cur vis' : 'cur';
+  h += `<span class="${ccls}" style="top:calc(4px + ${f.row} * var(--lh));left:calc(${g.total+f.col} * 1ch)">${ccls==='cur bar'?'':esc(ch)}</span>`;
+  if (S.cmp && insertLike()) {
+    const it = S.cmp.items[S.cmp.sel];
+    h += `<div class="cmp" style="top:calc(4px + ${f.row+1} * var(--lh));left:calc(${g.total + f.col - S.cmp.prefix.length} * 1ch)"><ul>`
+      + S.cmp.items.map((x,i) => `<li class="${i===S.cmp.sel?'on':''}" data-cmp="${i}"><span class="kd ${x.kind}">${KIND[x.kind][0]}</span><span>${esc(x.label)}</span><span class="sr">${KIND[x.kind][1]}</span></li>`).join('')
+      + `</ul>${S.cfg.cmpDocs && (it.detail || it.doc) ? `<div class="cdoc"><b>${esc(it.detail||'')}</b>${esc(it.doc||'')}</div>` : ''}</div>`;
+  }
+  const cm = f.lang==='rust' ? '//' : f.lang==='tutor' ? '#' : '--';
+  const mm = f.lines.map((l,i) => { const ind = l.length - l.trimStart().length, len = l.trim().length;
+    return `<i class="${i===f.row?'on':''} ${l.trim().startsWith(cm)?'mc':''}" style="margin-left:${ind*1.5}px;width:${len*1.5}px"></i>`; }).join('');
+  const prev = $('code'), stp = prev ? prev.scrollTop : 0, hadFocus = prev && document.activeElement===prev;
+  ed.innerHTML = (S.cfg.breadcrumbs ? `<div class="crumbs">${f.path.split('/').map(esc).join(' &gt; ')}${sym?` &gt; <b>${esc(sym.name)}</b>`:''}${f.ro?' <span style="color:var(--gold)">[generated]</span>':''}</div>` : '<div></div>')
+    + `<div class="edbody ${S.cfg.minimap?'':'nomm'}"><div class="code" id="code" tabindex="0" aria-label="Editor"><div class="lines" id="lines">${h}</div></div><div class="mm">${mm}</div></div>`;
+  const code = $('code'), lh = LH();
+  code.style.setProperty('--fs', S.cfg.fs+'px'); code.style.setProperty('--lh', lh+'px');
+  code.scrollTop = stp;
+  const top = 4 + f.row*lh, so = Math.min(S.cfg.scrolloff, 4)*lh;
+  if (top - so < code.scrollTop) code.scrollTop = Math.max(0, top - so);
+  else if (top + lh + so > code.scrollTop + code.clientHeight) code.scrollTop = top + lh + so - code.clientHeight;
+  const probe = document.createElement('span'); probe.textContent = '0000000000'; probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
+  $('lines').appendChild(probe); chW = probe.getBoundingClientRect().width/10 || 8; probe.remove();
+  if (hadFocus) code.focus({ preventScroll:true });
+}
+
+function ctlHTML(s){
+  const v = S.cfg[s.id], dis = s.dis ? 'disabled' : '';
+  if (s.t==='bool') return `<input type="checkbox" data-set="${s.id}" aria-label="${esc(s.l)}" ${v?'checked':''} ${dis}>`;
+  if (s.t==='select') return `<select class="field" data-set="${s.id}" aria-label="${esc(s.l)}" ${dis}>${s.o.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(v)?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
+  if (s.t==='number') return `<input class="field" type="number" data-set="${s.id}" value="${esc(v)}" aria-label="${esc(s.l)}" style="max-width:100px" ${dis}>`;
+  return `<input class="field" type="text" data-set="${s.id}" value="${esc(v)}" aria-label="${esc(s.l)}" spellcheck="false" ${dis}>`;
+}
+function stageWorks(row){
+  const s = st(), ctrlKept = row[3];
+  if (s==='vscode') return ['VS Code key', false];
+  if (s==='hybrid') return ['Both', true];
+  if (s==='safety') return [ctrlKept ? 'Both' : 'Vim key', true];
+  return ['Vim key', true];
+}
+function keytableHTML(q){
+  const rows = KEYT.filter(r => !q || r.join(' ').toLowerCase().includes(q));
+  if (!rows.length) return '';
+  return `<div class="set" style="grid-template-columns:1fr"><div class="l">Keybindings <span class="id">at stage ${STAGES.findIndex(x=>x[0]===st())+1}</span></div><div class="d">What each common action is in VS Code and in Vim, and which one works at your current stage. Ctrl+W, the leader menu and every Vim key are always available from Stage 2 up.</div>`
+    + `<div style="overflow-x:auto"><table class="ktab"><thead><tr><th>Action</th><th>VS Code</th><th>Vim</th><th>Works now</th></tr></thead><tbody>`
+    + rows.map(r => { const [w, on] = stageWorks(r); return `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="v">${esc(r[2].replace('<leader>', leaderName()+' '))}</td><td class="w ${on?'':'off'}">${w}</td></tr>`; }).join('')
+    + `</tbody></table></div><div><button class="btn" type="button" id="importkb">Import keybindings.json</button></div></div>`;
+}
+function settingRow(s){
+  if (s.t==='keytable') return keytableHTML(S.stq.trim().toLowerCase());
+  if (s.t==='aitest') return `<div class="set"><div class="l">Test the connection</div><div class="d">Runs :NvsOllama status, which asks ${esc(S.cfg.aiUrl)} for its installed models.</div><div class="ctl"><button class="btn" type="button" id="aitest">Test</button></div><div class="vim"><em>LUA</em>${hl(':NvsOllama status','lua')}</div></div>`;
+  const mod = String(S.cfg[s.id]) !== String(s.def);
+  const lua = s.vim ? s.vim(S.cfg[s.id]) : '';
+  return `<div class="set ${mod?'mod':''} ${s.dis?'dis':''}"><div class="l">${esc(s.l)}<span class="id">${esc(s.id)}</span></div>${s.d?`<div class="d">${esc(s.d)}</div>`:'<div></div>'}<div class="ctl">${mod?`<button class="btn" type="button" data-reset="${s.id}" title="Reset to default">Reset</button>`:''}${ctlHTML(s)}</div><div class="vim"><em>LUA</em>${hl(lua.split('\n')[0],'lua')}${lua.includes('\n')?' …':''}</div></div>`;
+}
+function renderSettingsTab(){
+  const q = S.stq.trim().toLowerCase();
+  const matchS = s => !q || (s.t==='keytable' ? KEYT.some(r=>r.join(' ').toLowerCase().includes(q)) || 'keybindings shortcuts'.includes(q)
+    : s.t==='aitest' ? 'test connection ollama'.includes(q) : (s.l+' '+(s.d||'')+' '+s.id+' '+(s.vim?s.vim(S.cfg[s.id]):'')).toLowerCase().includes(q));
+  const modCount = c => SET.filter(s => s.c===c && s.t!=='keytable' && s.t!=='aitest' && String(S.cfg[s.id])!==String(s.def)).length;
+  let list = '';
+  if (q) {
+    CATS.forEach(c => { const rows = SET.filter(s => s.c===c && matchS(s)); if (rows.length) list += `<h4>${c}</h4>` + rows.map(settingRow).join(''); });
+    if (!list) list = `<p style="color:var(--ash);padding:12px 0">No setting matches "${esc(S.stq)}". Vim option names work too, like scrolloff or rnu.</p>`;
+  } else {
+    list = `<h4>${S.scat}</h4>` + SET.filter(s => s.c===S.scat).map(settingRow).join('');
+  }
+  const report = S.imported ? `<div class="report"><div><b>Imported from VS Code</b> (a sample settings.json in this preview)</div>
+    <div>editor.fontSize 14 → Font size · editor.lineNumbers "relative" → relativenumber · editor.minimap.enabled false → Minimap · files.autoSave "afterDelay" → Auto save · editor.formatOnSave true → Format on save · editor.tabSize 4 → tabstop</div>
+    <div class="miss">No equivalent, skipped: workbench.startupEditor, telemetry.telemetryLevel (nvs.ide sends no telemetry)</div></div>` : '';
+  const prev = document.activeElement, pid = prev && prev.id, ppos = prev && prev.selectionStart;
+  $('ed').innerHTML = `<div class="crumbs">Settings &gt; <b>${q ? 'search' : S.scat}</b> · ${S.scope==='user'?'User':'Workspace'} scope</div>`
+    + `<div class="stab" id="stab" tabindex="0"><div class="sbar"><input class="field" id="stq" value="${esc(S.stq)}" placeholder="Search settings, including Vim names like relativenumber  ( / )" spellcheck="false" aria-label="Search settings">`
+    + `<span class="chips"><button class="btn ${S.scope==='user'?'on':''}" type="button" data-scope="user">User</button><button class="btn ${S.scope==='workspace'?'on':''}" type="button" data-scope="workspace">Workspace</button></span>`
+    + `<button class="btn" type="button" data-open="settings.lua">Open settings.lua</button><button class="btn" type="button" id="import">Import from VS Code</button></div>`
+    + `<div class="sgrid"><nav class="scats">${CATS.map(c => { const m = modCount(c); return `<button type="button" class="${!q&&S.scat===c?'on':''}" data-setcat="${c}"><span>${c}</span>${m?`<span class="m">${m}</span>`:''}</button>`; }).join('')}</nav>`
+    + `<div class="slist" id="slist">${report}${list}</div></div></div>`;
+  if (pid==='stq') { const n = $('stq'); n.focus(); if (ppos!=null) n.setSelectionRange(ppos,ppos); }
+}
+
+function specLua(p){
+  if (p.x) return [`-- lazyvim.json lists enabled extras. Same as:`, `{ import = "lazyvim.plugins.extras.${p.x}" }`];
+  const o = POPT[p.id], lines = [`return {`, `  "${p.id}",`];
+  p.load.forEach(l => { const [k, ...v] = l.split(' '); lines.push(`  ${k} = "${v.join(' ')}",`); });
+  if (!p.on) lines.push(`  enabled = false,`);
+  const ents = Object.entries(o);
+  if (ents.length) { lines.push(`  opts = {`); ents.forEach(([k,v]) => { const key = k.includes('.') ? k.split('.') : [k];
+    const val = typeof v==='string' ? `"${v}"` : String(v);
+    lines.push(key.length>1 ? `    ${key[0]} = { ${key[1]} = ${val} },` : `    ${k} = ${val},`); }); lines.push(`  },`); }
+  lines.push(`}`);
+  return lines;
+}
+function renderPlugTab(p){
+  let body = '';
+  const acts = p.src==='vsx' && p.tier==='t3' ? `<button class="btn" type="button" disabled>Needs webviews (Tier 3)</button>`
+    : p.id==='LazyVim/LazyVim' ? `<button class="btn on" type="button" disabled>Base</button>`
+    : `<button class="btn ${p.inst?'':'go'}" type="button" data-inst="${esc(p.id)}">${p.src==='extra' ? (p.inst?'Disable extra':'Enable extra') : p.inst?'Uninstall':'Install'}</button>`
+      + (p.inst && p.src!=='vsx' && p.id!=='LazyVim/LazyVim' ? `<button class="btn ${p.on?'on':''}" type="button" data-toggle="${esc(p.id)}">${p.on?'Enabled':'Disabled'}</button>` : '')
+      + (p.inst && p.upd ? `<button class="btn go" type="button" data-upd="${esc(p.id)}">Update</button>` : '');
+  if (p.src!=='vsx') {
+    if (p.x) body += `<div class="eqbox"><b>LazyVim extra: ${esc(p.x)}</b><span>Extras are ready-made bundles that LazyVim maintains. The same list is in :LazyExtras, where x toggles one.</span></div>`;
+    body += `<div class="pbox"><h4>Loads when</h4><div class="chips">${p.load.map(l=>`<span>${esc(l.replace('<leader>', leaderName()+' '))}</span>`).join('')}</div><p>Loading waits for this trigger, which keeps startup fast.</p></div>`;
+    if (p.opts.length) body += `<div class="pbox"><h4>Options</h4>${p.opts.map(o => { const v = POPT[p.id][o[0]], id = `po_${o[0]}`;
+      const ctl = o[1]==='bool' ? `<input type="checkbox" id="${id}" data-popt="${esc(o[0])}" ${v?'checked':''}>`
+        : o[1]==='select' ? `<select class="field" id="${id}" data-popt="${esc(o[0])}">${o[3].map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('')}</select>`
+        : `<input class="field" type="number" id="${id}" data-popt="${esc(o[0])}" value="${v}">`;
+      return `<div class="popt"><label for="${id}">${esc(o[0])}</label>${ctl}</div>`; }).join('')}</div>`;
+    if (p.keys.length) body += `<div class="pbox"><h4>Keymaps it adds</h4><table class="ktab"><tbody>${p.keys.map(k=>`<tr><td class="v">${esc(k[0].replace('<leader>', leaderName()+' '))}</td><td>${esc(k[1])}</td></tr>`).join('')}</tbody></table></div>`;
+    body += p.eq.length ? `<div class="eqbox"><b>Coming from VS Code</b><span>Covers what you used: ${p.eq.map(esc).join(', ')}</span></div>` : `<div class="eqbox"><b>Coming from VS Code</b><span>There's no direct VS Code equivalent. This is something Vim does that VS Code doesn't.</span></div>`;
+    body += `<div class="pbox"><h4>${p.x ? 'Enabled through lazyvim.json' : p.grp==='LazyVim core' || p.grp==='Base' ? 'Comes with LazyVim · override in lua/plugins/' + esc(p.nm.replace(/\.nvim$/,'')) + '.lua' : 'Spec file · lua/plugins/' + esc(p.nm.replace(/\.nvim$/,'')) + '.lua'}</h4><pre class="lua">${specLua(p).map(l=>hl(l,'lua')).join('\n')}</pre><p>This is a normal lazy.nvim spec, so terminal Neovim loads it the same way.</p></div>`;
+  } else {
+    const how = { lsp:'Neovim\'s LSP client runs the server directly. The extension host is not involved.', t1:'Declarative. nvs.ide converts it when you install it, and nothing runs afterwards.', t2:'Runs in the extension host, which starts while at least one Tier 2 extension is installed.', t3:'Needs a webview. Not supported until Tier 3.' }[p.tier];
+    body += `<div class="pbox"><h4>How it runs</h4><p><span class="tag ${p.tier}">${TIERNAME[p.tier]}</span> ${esc(how)}</p></div>`;
+    if (p.tier==='t2' && S.cfg.exthost==='never') body += `<div class="eqbox"><b>Extension host is set to Never</b><span>Change it in Settings &gt; Plugins before this extension can run.</span></div>`;
+    if (p.alt) { const a = PL[p.alt]; body += `<div class="eqbox"><b>Neovim-native alternative</b><span>${esc(a.nm)}: ${esc(a.ds)} It needs no extension host.</span><span><button class="btn" type="button" data-plug="${esc(a.id)}">Open ${esc(a.nm)}</button></span></div>`; }
+    body += `<div class="pbox"><h4>Source</h4><p>Open VSX · ${esc(S.cfg.openvsx)}</p></div>`;
+  }
+  $('ed').innerHTML = `<div class="crumbs">Plugins &gt; <b>${esc(p.nm)}</b></div><div class="ptabv" id="ptabv" tabindex="0">`
+    + `<div class="phd"><span class="ico">${px('pkg',3, p.src!=='vsx'?'spectral':'corpse')}</span><span class="nm">${esc(p.nm)} <span class="tag ${p.src}">${({nvim:'NEOVIM PLUGIN',extra:'LAZYVIM EXTRA',vsx:'VS CODE EXTENSION'})[p.src]}</span></span><span class="acts">${acts}</span><span class="id">${esc(p.id)}${p.upd&&p.inst?' · <span style="color:var(--gold)">update available</span>':''}</span></div>`
+    + `<p style="color:var(--bone)">${esc(p.ds)}</p>${body}</div>`;
+}
+
+function renderPanel(){
+  const diags = allDiags();
+  const tabs = [['problems','Problems'],['output','Output'],['debug','Debug console'],['terminal','Terminal']];
+  let b = '';
+  if (S.panel==='problems') b = diags.length ? diags.map(d => `<div class="prob" data-jump="${d.file}:${d.row}:${d.col}"><span class="warn">W</span><span>${esc(d.msg)}</span><span class="dim">${d.src}  ${esc(d.file)} [${d.row+1}, ${d.col+1}]</span></div>`).join('') : '<span class="dim">No problems in the loaded files.</span>';
+  else if (S.panel==='output') b = `<span class="dim">[lua_ls]</span> attached to runtime/lua/nvs.ide.lua\n<span class="dim">[rust-analyzer]</span> attached to shell/src/bridge.rs\n<span class="dim">[lazy.nvim]</span> ${PLUGS.filter(p=>p.src==='nvim'&&p.inst).length} plugins installed, ${PLUGS.filter(p=>p.src==='nvim'&&p.inst&&p.on).length} enabled\n<span class="dim">[nvs.ide]</span> stage ${STAGES.findIndex(s=>s[0]===st())+1} (${st()}), leader ${leaderName()}\n<span class="dim">[nvs.ide]</span> extension host ${hostRunning()?'<span class="ok">running</span>':'not running'}`;
+  else if (S.panel==='debug') b = S.debugging
+      ? `<span class="inf">osv: listening on 127.0.0.1:8086</span>\n<span class="warn">Paused at bridge.lua:5 (breakpoint)</span>\n<span class="dim">&gt;</span> event\n<span class="ok">"problems"</span>`
+      : `<span class="dim">Start a session with F5. Adapters are the same DAP servers VS Code uses.</span>`;
+  else b = `<span class="dim">PS ~\\nvs.ide&gt;</span> cargo run -p shell --release\n<span class="ok">   Compiling</span> nvs-shell v0.1.0\n<span class="ok">    Finished</span> \`release\` profile [optimized] target(s)\n<span class="inf">nvim --embed attached:</span> ext_multigrid ext_cmdline ext_popupmenu ext_messages ext_tabline\n<span class="dim">Terminal is in Insert mode. Ctrl+\\ Ctrl+N switches to Normal mode.</span>\n<span class="dim">PS ~\\nvs.ide&gt;</span> <span class="blink">_</span>`;
+  $('panel').innerHTML = `<div class="ptabs">${tabs.map(([k,t]) => `<button type="button" class="ptab ${S.panel===k?'on':''}" data-panel="${k}">${t}${k==='problems'&&diags.length?`<span class="cnt">${diags.length}</span>`:''}</button>`).join('')}<span class="fill"></span></div><div class="pbody" id="pbody" tabindex="0">${b}</div>`;
+}
+
+function renderStatus(){
+  const f = S.active && isCode(S.active) ? cur() : null, diags = allDiags();
+  let mode = st()==='vscode' ? 'EDIT' : S.mode;
+  if (S.focus==='side' || S.focus==='panel') mode = 'PANE';
+  const lsp = f ? (f.lang==='rust' ? 'rust-analyzer' : f.lang==='lua' ? 'lua_ls' : 'no LSP') : '';
+  const si = STAGES.findIndex(s=>s[0]===st());
+  const info = S.focus==='side' ? 'sidebar · j k move, l open, h close, Ctrl+L back'
+    : S.focus==='panel' ? 'panel · j k scroll, Ctrl+K back'
+    : S.pending==='ctrlw' ? 'Ctrl+W  (h sidebar, j panel, l editor)' : (S.count||'') + (S.pending||'');
+  $('status').innerHTML = `<span class="mode ${mode}">${mode}</span>`
+    + `<button type="button" data-view="git"><span class="accent">main</span> ${gitChanges().length} changed</button>`
+    + `<button type="button" data-panel="problems"><span class="warn">W ${diags.length}</span> E 0</button>`
+    + `<span class="grow">${esc(info)}</span>`
+    + (f ? `<span>${lsp}</span><span>Ln ${f.row+1}, Col ${f.col+1}</span>` : '')
+    + `<button type="button" data-view="learn" title="Change stage">stage <span class="accent">${si+1} · ${STAGES[si][1]}</span></button>`
+    + `<button type="button" data-setcat="Local AI" title="Local model through Ollama">ai: ${S.cfg.aiOn?'<span class="accent">'+esc(S.cfg.aiChat)+'</span>':'off'}</button>`
+    + `<button type="button" data-view="plugins" title="Starts only when an extension needs it">exthost: ${hostRunning()?'<span class="accent">on</span>':'off'}</button>`;
+}
+
+function renderHints(){
+  const L = leaderName(), s = st();
+  const H = s==='vscode'
+    ? [['Type','edit'],['Ctrl+S','save'],['Ctrl+Shift+K','delete line'],['Ctrl+/','comment'],['Ctrl+F','find'],['Ctrl+P','files'],['F1','palette'],['Ctrl+B','sidebar'],['Ctrl+Space','suggestions'],['F1','ask how'],['Ctrl+Shift+P','palette']]
+    : [['Esc','Normal'],['i a o','Insert'],['h j k l','move'],['3j','counts'],['w b 0 $ gg G','jump'],['x dd u','edit'],['gcc','comment'],['v','Visual'],['/ n N','search'],[':','command line'],[L,'leader menu'],['Ctrl+H / Ctrl+J / Ctrl+L','panes'],['F1',' ask how'],['Ctrl+Space','suggestions']];
+  $('hints').innerHTML = `<span style="color:var(--spectral)">Stage ${STAGES.findIndex(x=>x[0]===s)+1}:</span>` + H.map(([k,t]) => `<span><kbd>${esc(k)}</kbd> ${esc(t)}</span>`).join('');
+}
+
+function render(){
+  $('body').classList.toggle('nosb', !S.sidebar);
+  $('body').classList.toggle('sbr', S.cfg.sidebarSide==='right');
+  $('body').classList.toggle('noab', !S.cfg.activityBar);
+  $('main').classList.toggle('nopanel', !S.panelOpen);
+  renderTitle(); renderAct(); renderSide(); renderTabs(); renderEditor(); renderPanel(); renderStatus(); renderHints();
+}
+const renderLight = () => { renderTabs(); renderEditor(); renderStatus(); if (S.sidebar && S.view!=='plugins' && S.view!=='settings') renderSide(); renderAct(); if (S.panel==='problems') renderPanel(); };
+
+/* ================= actions ================= */
+function setView(v){ if (S.sidebar && S.view===v) S.sidebar = false; else { S.view = v; S.sidebar = true; } render(); }
+function showView(v){ S.view = v; S.sidebar = true; render(); }
+function showPanel(p){ S.panel = p; S.panelOpen = true; render(); }
+function openTab(n){
+  if (n==='settings.lua') syncSettingsFile();
+  if (!S.tabs.includes(n)) S.tabs.push(n);
+  S.active = n; S.focus = 'editor'; S.mode = baseMode(); render();
+  if (isCode(n)) focusCode(); else { const t = $('stab') || $('ptabv'); if (t) t.focus({ preventScroll:true }); }
+}
+function openFile(n, row, col){
+  if (!FILES[n]) { msg(`${n} isn't loaded in this preview. Try nvs.ide.lua, bridge.rs or necronomicon.lua.`, 'warn'); return; }
+  const f = FILES[n]; if (row!=null) { f.row = Math.min(row, f.lines.length-1); f.col = col||0; }
+  openTab(n); clampCol(); renderLight();
+}
+function openAsk(){ S.view = 'ask'; S.sidebar = true; render(); const i = $('askq'); if (i) i.focus(); }
+function openSettings(cat){ if (cat) { S.scat = cat; S.stq = ''; } openTab('settings'); }
+function closeTab(n){
+  const i = S.tabs.indexOf(n); if (i<0) return;
+  S.tabs.splice(i,1);
+  if (S.active===n) S.active = S.tabs[Math.min(i, S.tabs.length-1)] || null;
+  render();
+}
+function focusCode(){ S.focus = 'editor'; const c = $('code'); if (c) c.focus({ preventScroll:true }); else { const t = $('stab') || $('ptabv'); if (t) t.focus({ preventScroll:true }); } }
+function baseMode(){ return st()==='vscode' || st()==='hybrid' ? 'INSERT' : 'NORMAL'; }
+function setStage(s){
+  S.cfg.stage = s; S.mode = baseMode();
+  const i = STAGES.findIndex(x=>x[0]===s);
+  msg(`Stage ${i+1}: ${STAGES[i][1]}. ${STAGES[i][2]}`, 'ok'); render(); focusCode();
+}
+function save(){
+  if (!S.active || !isCode(S.active)) return;
+  const f = cur();
+  if (f.ro) { msg('settings.lua is kept in sync with the Settings screen. Change values there, or with :set.', 'warn'); return; }
+  f.dirty = false;
+  const bytes = f.lines.join('\n').length + 1;
+  msg(`"${f.path}" ${f.lines.length}L, ${bytes}B written${S.cfg.formatOnSave && f.lang!=='tutor' ? ' (formatted)' : ''}`, 'ok'); render();
+}
+function toggleBp(){ if (!S.active || !isCode(S.active)) return; const f = cur(); f.bps.has(f.row) ? f.bps.delete(f.row) : f.bps.add(f.row); render(); }
+function startDebug(){
+  if (!FILES['bridge.lua'].bps.has(4)) { S.debugging = false; msg('Session ended. No breakpoint was hit (set one on nvs.ide.lua line 5).', 'warn'); if (S.cfg.dapOpen) showView('debug'); return; }
+  S.debugging = true; if (S.cfg.dapOpen) { S.view = 'debug'; S.sidebar = true; } S.panel = 'debug'; S.panelOpen = true; openFile('bridge.lua', 4, 2);
+}
+function stopDebug(){ S.debugging = false; msg('Debug session ended'); render(); }
+function applySetting(id, v){
+  const s = SETMAP[id];
+  if (s.t==='bool') v = !!v; else if (s.t==='number') { v = parseInt(v,10); if (isNaN(v)) v = s.def; } else if (id==='fs') v = +v;
+  if (id==='stage') return setStage(v);
+  S.cfg[id] = v;
+  if (id==='panelStart') { /* startup only */ }
+  if (FILES['settings.lua']) syncSettingsFile();
+  render();
+}
+
+/* ================= editing model ================= */
+function editable(){ const f = cur(); if (f.ro) { msg('settings.lua is generated from the Settings screen in this preview. Use the screen, or :set.', 'warn'); return false; } return true; }
+function snap(){ const f = cur(); f.undo.push({ lines:[...f.lines], row:f.row, col:f.col }); if (f.undo.length>200) f.undo.shift(); }
+function undo(){ const f = cur(), s = f.undo.pop(); if (!s) { msg('Already at oldest change'); return; } f.lines = s.lines; f.row = s.row; f.col = s.col; f.dirty = true; clampCol(); renderLight(); }
+function clampCol(){ const f = cur(), len = f.lines[f.row].length; f.col = Math.max(0, Math.min(f.col, insertLike() ? len : Math.max(0,len-1))); }
+function move(dr, dc){ const f = cur(); f.row = Math.max(0, Math.min(f.lines.length-1, f.row+dr)); f.col += dc; clampCol(); }
+function touch(){ const f = cur(); f.dirty = true; f.changed.add(f.row); }
+function insertText(t){ const f = cur(), l = f.lines[f.row]; f.lines[f.row] = l.slice(0,f.col) + t + l.slice(f.col); f.col += t.length; touch(); }
+function newline(){ const f = cur(), l = f.lines[f.row], ind = l.match(/^\s*/)[0]; f.lines.splice(f.row, 1, l.slice(0,f.col), ind + l.slice(f.col).trimStart()); f.row++; f.col = ind.length; touch(); }
+function backspace(){ const f = cur(); if (f.col>0) { const l = f.lines[f.row]; f.lines[f.row] = l.slice(0,f.col-1) + l.slice(f.col); f.col--; } else if (f.row>0) { const p = f.lines[f.row-1]; f.lines[f.row-1] = p + f.lines[f.row]; f.lines.splice(f.row,1); f.row--; f.col = p.length; } touch(); }
+function deleteLines(n){ const f = cur(); snap(); const y = f.lines.splice(f.row, n); if (!f.lines.length) f.lines.push(''); f.row = Math.min(f.row, f.lines.length-1); clampCol(); touch(); return y; }
+function toggleComment(){
+  const f = cur(), cm = f.lang==='rust' ? '//' : f.lang==='tutor' ? '#' : '--', l = f.lines[f.row], ind = l.match(/^\s*/)[0];
+  snap();
+  if (l.trimStart().startsWith(cm+' ')) f.lines[f.row] = ind + l.trimStart().slice(cm.length+1);
+  else if (l.trimStart().startsWith(cm)) f.lines[f.row] = ind + l.trimStart().slice(cm.length);
+  else f.lines[f.row] = ind + cm + ' ' + l.trimStart();
+  touch(); clampCol();
+}
+function wordFwd(){ const f = cur(), l = f.lines[f.row]; const re = /\W\w|\w\W|\s\S/g; re.lastIndex = f.col; let r; while ((r = re.exec(l))) { const at = r.index + r[0].length - 1; if (at > f.col && !/\s/.test(l[at])) { f.col = at; return; } } if (f.row < f.lines.length-1) { f.row++; f.col = f.lines[f.row].match(/^\s*/)[0].length; } }
+function wordBack(){ const f = cur(), l = f.lines[f.row]; let c = f.col-1; while (c>0 && /\s/.test(l[c])) c--; while (c>0 && /\w/.test(l[c-1]) && /\w/.test(l[c])) c--; if (c<0 && f.row>0) { f.row--; f.col = Math.max(0, f.lines[f.row].length-1); } else f.col = Math.max(0,c); }
+function enterInsert(where){
+  if (!editable()) return;
+  const f = cur(); snap(); S.mode = 'INSERT';
+  if (where==='a') f.col = Math.min(f.col+1, f.lines[f.row].length);
+  if (where==='A') f.col = f.lines[f.row].length;
+  if (where==='I') f.col = f.lines[f.row].match(/^\s*/)[0].length;
+  if (where==='o' || where==='O') { const ind = f.lines[f.row].match(/^\s*/)[0]; const at = where==='o' ? f.row+1 : f.row; f.lines.splice(at, 0, ind); f.row = at; f.col = ind.length; touch(); }
+  skill('insert');
+}
+function findNext(q, dir, fromCmd){
+  const f = cur(); if (!q) { msg('E35: No previous regular expression', 'err'); return; }
+  const ic = S.cfg.ignorecase && !(S.cfg.smartcase && /[A-Z]/.test(q));
+  const has = (l, from) => { const L = ic ? l.toLowerCase() : l, Q = ic ? q.toLowerCase() : q; return dir>0 ? L.indexOf(Q, from) : L.lastIndexOf(Q, from); };
+  const n = f.lines.length;
+  for (let k=0;k<=n;k++) {
+    const r = (f.row + dir*k + n*2) % n, l = f.lines[r];
+    const from = k===0 ? (dir>0 ? f.col+1 : f.col-1) : (dir>0 ? 0 : l.length);
+    if (k===0 && from<0) continue;
+    const at = has(l, from);
+    if (at>=0) {
+      const wrapped = dir>0 ? r < f.row || (r===f.row && at<=f.col && k>0) : r > f.row;
+      f.row = r; f.col = at; clampCol();
+      if (wrapped) msg(dir>0 ? 'search hit BOTTOM, continuing at TOP' : 'search hit TOP, continuing at BOTTOM', 'warn');
+      else if (fromCmd) msg('/' + q);
+      return;
+    }
+  }
+  msg(`E486: Pattern not found: ${q}`, 'err');
+}
+
+function onEditorKey(e){
+  if (!S.active || !isCode(S.active)) return false;
+  const f = cur(), k = e.key, s = st();
+  if (S.cmp && insertLike()) {
+    const n = S.cmp.items.length;
+    if (k==='ArrowDown' || (e.ctrlKey && k==='n')) { S.cmp.sel = (S.cmp.sel+1) % n; renderEditor(); return true; }
+    if (k==='ArrowUp' || (e.ctrlKey && k==='p')) { S.cmp.sel = (S.cmp.sel-1+n) % n; renderEditor(); return true; }
+    const accept = S.cfg.cmpAccept==='enter' ? k==='Enter' : S.cfg.cmpAccept==='tab' ? k==='Tab' : (e.ctrlKey && k==='y');
+    if (accept) { acceptCmp(); return true; }
+    if (e.ctrlKey && k==='e') { S.cmp = null; renderEditor(); return true; }
+    if (k==='Escape') S.cmp = null;
+  }
+  if (insertLike() && e.ctrlKey && k===' ') { updateCmp(true); renderEditor(); if (!S.cmp) msg('No suggestions here'); return true; }
+  if (insertLike() && e.altKey && S.ghost) {
+    if (k==='a' || k==='A' || k==='l' || k==='L') { acceptGhost(); return true; }
+    if (k==='e' || k==='E') { S.ghost = ''; renderEditor(); return true; }
+  }
+  // Ctrl+W pane moves (all stages with Vim keys)
+  if (S.pending==='ctrlw') { S.pending = ''; if (k==='h') focusSide(); else if (k==='j') focusPanel(); else focusCode(); skill('ctrlw'); renderStatus(); return true; }
+  if (e.ctrlKey && (k==='w' || k==='W') && s!=='vscode' && S.mode!=='INSERT') { S.pending = 'ctrlw'; renderStatus(); return true; }
+  if (e.ctrlKey && !e.shiftKey && s!=='vscode' && S.mode!=='INSERT' && (k==='h' || k==='j')) { k==='h' ? focusSide() : focusPanel(); skill('ctrlw'); return true; }
+  if (e.ctrlKey || e.metaKey) {
+    if (s==='neovim') {
+      if (k==='b') { move(-10,0); renderLight(); return true; }
+      if (k==='f') { move(10,0); renderLight(); return true; }
+      if (k==='r') { msg('Redo is not modelled in this preview'); return true; }
+      return false;
+    }
+    const K = (e.shiftKey ? 'S-' : '') + k.toLowerCase();
+    const inNormal = S.mode!=='INSERT' && s!=='vscode';
+    if (K==='s') { save(); coach('ctrl-s', 'Ctrl+S saved. In Vim: :w then Enter.'); return true; }
+    if (K==='z') { undo(); coach('ctrl-z', 'Ctrl+Z undid it. In Normal mode, u undoes and Ctrl+R redoes.'); return true; }
+    if (K==='s-k') { if (!editable()) return true; deleteLines(1); renderLight(); coach('ctrl-shift-k', 'Ctrl+Shift+K deleted the line. In Normal mode: dd. 3dd deletes three.'); return true; }
+    if (K==='/') { if (!editable()) return true; toggleComment(); renderLight(); coach('ctrl-/', 'Ctrl+/ toggled the comment. In Normal mode: gcc.'); return true; }
+    if (K==='f') { openPalette('/'); coach('ctrl-f', 'Ctrl+F opens search. In Normal mode, / does the same, then n and N.'); return true; }
+    if (K==='p') { openPalette('@'); coach('ctrl-p', `Ctrl+P finds files. In Vim: ${leaderName()} then f.`); return true; }
+    if (K==='y' || K==='s-z') { msg('Redo is not modelled in this preview'); return true; }
+    if (inNormal && K==='r') { msg('Redo is not modelled in this preview'); return true; }
+    return false;
+  }
+  if (k==='F9') { toggleBp(); return true; }
+  const arrows = { ArrowLeft:[0,-1], ArrowRight:[0,1], ArrowUp:[-1,0], ArrowDown:[1,0] };
+  if (arrows[k]) {
+    move(...arrows[k]); renderLight();
+    if (++S.arrows >= 6) { S.arrows = 0; coach('arrows', s==='vscode' ? 'Lots of arrow presses. At Stage 2, Esc then 6j moves six lines at once.' : 'Lots of arrow presses. Esc, then 6j or 6k moves six lines at once.'); }
+    return true;
+  }
+  S.arrows = 0;
+  if (k==='Home' || k==='End') { f.col = k==='Home' ? 0 : f.lines[f.row].length; clampCol(); renderLight(); coach('home-end', 'In Normal mode, 0 goes to the start of the line and $ to the end.'); return true; }
+
+  if (insertLike()) {
+    if (k==='Escape') {
+      if (s==='vscode') { coach('esc-vscode', 'Esc does nothing at Stage 1. Switch to Stage 2 in Learn to get Normal mode.'); return true; }
+      S.mode = 'NORMAL'; S.cmp = null; S.ghost = ''; f.col = Math.max(0,f.col-1); clampCol(); skill('esc'); renderLight(); return true;
+    }
+    if (k.length===1 || k==='Enter' || k==='Backspace' || k==='Tab') { if (!editable()) return true; }
+    if (s==='vscode' && (k===' ' || k==='Enter')) snap();
+    if (s==='vscode' && f.undo.length===0) snap();
+    if (k==='Enter') { S.cmp = null; S.ghost = ''; newline(); renderLight(); return true; }
+    if (k==='Backspace') { backspace(); updateCmp(); updateGhost(); renderLight(); return true; }
+    if (k==='Tab') { insertText(S.cfg.expandtab ? ' '.repeat(S.cfg.tabstop) : '\t'); renderLight(); return true; }
+    if (k.length===1) {
+      if (S.cfg.jk && s!=='vscode' && k==='k' && Date.now()-S.lastJ < 450 && f.lines[f.row][f.col-1]==='j') { backspace(); S.mode = 'NORMAL'; f.col = Math.max(0,f.col-1); clampCol(); skill('esc'); renderLight(); return true; }
+      if (k==='j') S.lastJ = Date.now();
+      insertText(k); updateCmp(); updateGhost(); renderLight(); return true;
+    }
+    return false;
+  }
+
+  // Leader menu
+  if (S.leader) { S.leader = false; hideWK(); runLeader(k); return true; }
+  if (k===S.cfg.leader && !S.pending && !S.count) { S.leader = true; showWK(); skill('leader'); return true; }
+
+  // Counts
+  if (/^[1-9]$/.test(k) || (k==='0' && S.count)) { S.count += k; renderStatus(); return true; }
+  const n = parseInt(S.count || '1', 10), hadCount = !!S.count; S.count = '';
+  if (hadCount) skill('count');
+
+  if (S.pending) {
+    const p = S.pending + k; S.pending = '';
+    if (p==='gg') { f.row = hadCount ? Math.min(n,f.lines.length)-1 : 0; f.col = 0; clampCol(); skill('jump'); }
+    else if (p==='dd') { if (editable()) { const y = deleteLines(n); msg(n>1 ? `${n} fewer lines` : `deleted: ${y[0].trim().slice(0,40)}`); skill('dd'); } }
+    else if (p==='gc') { S.pending = 'gc'; renderStatus(); return true; }
+    else if (p==='gcc') { if (editable()) { toggleComment(); skill('gcc'); } }
+    else if (p==='gd') msg('lua_ls: jumped to definition (vim.lsp.buf.definition)');
+    else if (p==='gr') { S.pending = 'gr'; renderStatus(); return true; }
+    else if (p==='grn') msg('Rename opens as a native input over the symbol (vim.lsp.buf.rename)');
+    else if (p==='grr') { msg('References open in the quickfix list'); }
+    else if (p==='gra') msg('Code actions open as a native popup menu');
+    renderLight(); return true;
+  }
+  const rep = fn => { for (let i=0;i<n;i++) fn(); };
+  const map = {
+    h:()=>{ rep(()=>move(0,-1)); skill('hjkl'); }, l:()=>{ rep(()=>move(0,1)); skill('hjkl'); },
+    j:()=>{ rep(()=>move(1,0)); skill('hjkl'); }, k:()=>{ rep(()=>move(-1,0)); skill('hjkl'); },
+    w:()=>{ rep(wordFwd); clampCol(); skill('word'); }, b:()=>{ rep(wordBack); skill('word'); },
+    '0':()=>{ f.col = 0; skill('line'); }, '$':()=>{ f.col = f.lines[f.row].length; clampCol(); skill('line'); }, '^':()=>{ f.col = f.lines[f.row].match(/^\s*/)[0].length; skill('line'); },
+    G:()=>{ f.row = hadCount ? Math.min(n,f.lines.length)-1 : f.lines.length-1; clampCol(); skill('jump'); },
+    i:()=>enterInsert('i'), a:()=>enterInsert('a'), A:()=>enterInsert('A'), I:()=>enterInsert('I'), o:()=>enterInsert('o'), O:()=>enterInsert('O'),
+    x:()=>{ if (!editable()) return; const l = f.lines[f.row]; if (!l.length) return; snap(); f.lines[f.row] = l.slice(0,f.col) + l.slice(f.col+n); touch(); clampCol(); skill('x'); },
+    u:()=>{ undo(); skill('u'); },
+    v:()=>{ if (S.mode==='VISUAL') S.mode = 'NORMAL'; else { S.mode = 'VISUAL'; S.anchor = f.row; skill('visual'); } },
+    V:()=>{ if (S.mode==='VISUAL') S.mode = 'NORMAL'; else { S.mode = 'VISUAL'; S.anchor = f.row; skill('visual'); } },
+    Escape:()=>{ S.mode = 'NORMAL'; S.pending = ''; },
+    g:()=>{ S.pending = 'g'; },
+    d:()=>{ if (S.mode==='VISUAL') { if (!editable()) return; snap(); const a = Math.min(S.anchor,f.row), z = Math.max(S.anchor,f.row); f.lines.splice(a, z-a+1); if (!f.lines.length) f.lines.push(''); f.row = Math.min(a, f.lines.length-1); S.mode = 'NORMAL'; touch(); clampCol(); msg(`${z-a+1} fewer lines`); } else S.pending = 'd'; },
+    ':':()=>{ openPalette(':'); return 'skip'; },
+    '/':()=>{ openPalette('/'); return 'skip'; },
+    n:()=>{ rep(()=>findNext(S.lastSearch, 1)); skill('search'); }, N:()=>{ rep(()=>findNext(S.lastSearch, -1)); skill('search'); },
+    K:()=>msg('lua_ls hover: vim.rpcnotify(channel, method, ...) sends a notification to a channel'),
+  };
+  if (map[k]) { if (map[k]()==='skip') return true; renderLight(); return true; }
+  return false;
+}
+
+/* ================= leader menu ================= */
+const LEAD = [
+  ['f','Find files',()=>openPalette('@')],['e','Explorer',()=>setView('explorer')],['g','Git',()=>showView('git')],['d','Debug',()=>showView('debug')],
+  ['p','Plugins',()=>showView('plugins')],['s','Settings',()=>openSettings()],['l','Learn',()=>showView('learn')],['t','Terminal',()=>{ if (S.panelOpen && S.panel==='terminal') { S.panelOpen = false; render(); } else showPanel('terminal'); }],
+  ['w','Save',()=>save()],['c','Comment line',()=>{ if (editable()) { toggleComment(); renderLight(); } }],['k','Keybindings',()=>openSettings('Keys')],['?','Ask how to…',()=>openAsk()],['N','nvs.ide: tutor',()=>openTab('nvs-ide.tutor')],['a','All commands',()=>openPalette('')]
+];
+function showWK(){ const w = $('wk'); w.hidden = false; w.innerHTML = `<div class="hd"><span>LEADER (${esc(leaderName())})</span><span>which-key.nvim · Esc closes</span></div><div class="grid">${LEAD.map(([k,t])=>`<span><b>${esc(k)}</b> ${esc(t)}</span>`).join('')}</div>`; }
+function hideWK(){ $('wk').hidden = true; }
+function runLeader(k){ const x = LEAD.find(l => l[0]===k); if (x) x[2](); else if (k!=='Escape') msg(`No leader mapping for ${k}`); }
+
+/* ================= pane focus (Ctrl+W, j/k lists) ================= */
+function sideRows(){ return [...$('side').querySelectorAll('.nav')]; }
+function markSide(){ const r = sideRows(); r.forEach(x=>x.classList.remove('kf')); if (!r.length) return; S.sideSel = Math.max(0, Math.min(S.sideSel, r.length-1)); r[S.sideSel].classList.add('kf'); r[S.sideSel].scrollIntoView({ block:'nearest' }); }
+function focusSide(){ if (!S.sidebar) { S.sidebar = true; render(); } S.focus = 'side'; $('side').focus({ preventScroll:true }); markSide(); renderStatus(); }
+function focusPanel(){ if (!S.panelOpen) { S.panelOpen = true; render(); } S.focus = 'panel'; $('pbody').focus({ preventScroll:true }); renderStatus(); }
+function onSideKey(e){
+  const k = e.key, rows = sideRows();
+  if (S.pending==='ctrlw') { S.pending = ''; if (k==='l') focusCode(); else if (k==='j') focusPanel(); renderStatus(); skill('ctrlw'); return true; }
+  if (e.ctrlKey && (k==='w' || k==='W')) { S.pending = 'ctrlw'; renderStatus(); return true; }
+  if (e.ctrlKey && (k==='l' || k==='j')) { k==='l' ? focusCode() : focusPanel(); renderStatus(); skill('ctrlw'); return true; }
+  if (S.pending==='g') { S.pending = ''; if (k==='g') { S.sideSel = 0; markSide(); } return true; }
+  if (k==='j' || k==='ArrowDown') { S.sideSel++; markSide(); return true; }
+  if (k==='k' || k==='ArrowUp') { S.sideSel--; markSide(); return true; }
+  if (k==='G') { S.sideSel = rows.length-1; markSide(); return true; }
+  if (k==='g') { S.pending = 'g'; return true; }
+  const r = rows[S.sideSel];
+  if (k==='Enter' || k==='l' || k==='o') { if (r) { if (r.dataset.dir && S.open.has(r.dataset.dir) && k==='l') return true; r.click(); if (r.dataset.dir || r.dataset.stage) { S.focus = 'side'; $('side').focus({ preventScroll:true }); markSide(); } } return true; }
+  if (k==='h') { if (r && r.dataset.dir && S.open.has(r.dataset.dir)) { S.open.delete(r.dataset.dir); renderSide(); } return true; }
+  if (k==='/') { const i = $('side').querySelector('input.field'); if (i) i.focus(); return true; }
+  if (k==='Escape') { focusCode(); renderStatus(); return true; }
+  return false;
+}
+function onPanelKey(e){
+  const k = e.key, pb = $('pbody');
+  if (S.pending==='ctrlw') { S.pending = ''; if (k==='h') focusSide(); else focusCode(); renderStatus(); skill('ctrlw'); return true; }
+  if (e.ctrlKey && (k==='w' || k==='W')) { S.pending = 'ctrlw'; renderStatus(); return true; }
+  if (e.ctrlKey && (k==='k' || k==='h' || k==='l')) { k==='h' ? focusSide() : focusCode(); renderStatus(); skill('ctrlw'); return true; }
+  if (k==='j') { pb.scrollTop += 18; return true; } if (k==='k') { pb.scrollTop -= 18; return true; }
+  if (k==='G') { pb.scrollTop = pb.scrollHeight; return true; }
+  if (k==='Escape') { focusCode(); renderStatus(); return true; }
+  return false;
+}
+function onFormKey(e, root){
+  const k = e.key, t = e.target;
+  const typing = t.matches('input[type=text],input[type=number],input:not([type])');
+  if (typing) { if (k==='Escape') { root.focus({ preventScroll:true }); return true; } return false; }
+  if (S.pending==='ctrlw') { S.pending = ''; if (k==='h') focusSide(); else if (k==='j') focusPanel(); renderStatus(); return true; }
+  if (e.ctrlKey && (k==='w' || k==='W')) { S.pending = 'ctrlw'; renderStatus(); return true; }
+  if (e.ctrlKey && (k==='h' || k==='j')) { k==='h' ? focusSide() : focusPanel(); renderStatus(); return true; }
+  const ctl = [...root.querySelectorAll('input,select,button:not([disabled])')];
+  const i = ctl.indexOf(t);
+  if (k==='j' || k==='k') { const n = ctl[Math.max(0, Math.min(ctl.length-1, (i<0 ? -1 : i) + (k==='j'?1:-1)))]; if (n) { n.focus(); n.scrollIntoView({ block:'nearest' }); } return true; }
+  if (k==='/') { const s = root.querySelector('#stq,#pq'); if (s) s.focus(); return true; }
+  if (k==='G') { const n = ctl[ctl.length-1]; if (n) n.focus(); return true; }
+  return false;
+}
+
+/* ================= command palette ================= */
+const CMDS = () => [
+  { t:'Toggle sidebar', s:'shell', k:'Ctrl+B', v:'<leader>e', run:()=>{ S.sidebar = !S.sidebar; render(); } },
+  { t:'Toggle bottom panel', s:'shell', k:'Ctrl+`', v:'<leader>t', run:()=>{ S.panelOpen = !S.panelOpen; render(); } },
+  { t:'Preferences: Open Settings', s:'shell', k:'Ctrl+,', v:'<leader>s', run:()=>openSettings() },
+  { t:'Preferences: Keyboard Shortcuts', s:'shell', k:'Ctrl+K Ctrl+S', v:'<leader>k', run:()=>openSettings('Keys') },
+  { t:'Preferences: Import from VS Code', s:'shell', k:'', v:'', run:()=>{ openSettings(); doImport(); } },
+  { t:'Learn: Open Tutor', s:'shell', k:'', v:':NvsTutor', run:()=>openTab('nvs-ide.tutor') },
+  { t:'Ask: How do I…', s:'shell', k:'F1', v:'<leader>?', run:()=>openAsk() },
+  { t:'Welcome: Choose your stage', s:'shell', k:'', v:':NvsWelcome', run:()=>openTab('welcome') },
+  { t:'Plugins: LazyVim extras', s:'plugin', k:'', v:':LazyExtras', run:()=>{ S.ptab = 'extras'; showView('plugins'); } },
+  { t:'Local AI: Toggle', s:'shell', k:'', v:':NvsOllama on', run:()=>applySetting('aiOn', !S.cfg.aiOn) },
+  ...STAGES.map((x,i) => ({ t:`Learn: Switch to Stage ${i+1}, ${x[1]}`, s:'shell', k:'', v:`:NvsStage ${i+1}`, run:()=>setStage(x[0]) })),
+  { t:'Plugins: Browse', s:'shell', k:'Ctrl+Shift+X', v:'<leader>p', run:()=>{ S.ptab = 'browse'; showView('plugins'); } },
+  { t:'Plugins: Update all', s:'plugin', k:'', v:':Lazy update', run:()=>updateAll() },
+  { t:'View: Search files', s:'shell', k:'Ctrl+Shift+F', v:'<leader>fg', run:()=>showView('search') },
+  { t:'View: Problems', s:'shell', k:'Ctrl+Shift+M', v:':Trouble', run:()=>showPanel('problems') },
+  { t:'Go to file', s:'plugin', k:'Ctrl+P', v:'<leader>ff', run:()=>openPalette('@') },
+  { t:'Git: Stage current file', s:'shell', k:'', v:'<leader>hs', run:()=>{ if (!S.active || !isCode(S.active)) return; S.staged.add(cur().path); msg(`Staged ${cur().path}`,'ok'); showView('git'); } },
+  { t:'Format document', s:'lsp', k:'Shift+Alt+F', v:'<leader>cf', run:()=>msg('lua_ls: document already formatted', 'ok') },
+  { t:'Go to definition', s:'lsp', k:'F12', v:'gd', run:()=>msg('lua_ls: jumped to definition') },
+  { t:'Rename symbol', s:'lsp', k:'F2', v:'grn', run:()=>msg('Rename opens as a native input over the symbol') },
+  { t:'Find references', s:'lsp', k:'Shift+F12', v:'grr', run:()=>msg('References open in the quickfix list') },
+  { t:'Debug: Start', s:'dap', k:'F5', v:'F5', run:()=>startDebug() },
+  { t:'Debug: Toggle breakpoint', s:'dap', k:'F9', v:'F9', run:()=>toggleBp() },
+  { t:'Prettier: Format document', s:'ext', k:'', v:'', run:()=> PL['esbenp.prettier-vscode'].inst ? msg('Prettier (extension host): formatted','ok') : msg('Install Prettier from Plugins first, or conform.nvim for the native way','warn') },
+  ...EXL.map(x => ({ t:x, s:'ex', k:'', v:'', run:()=>runEx(x) }))
+];
+const EXL = [':w',':q',':NvsAsk delete a line',':NvsTutor',':NvsStage',':NvsOllama status',':NvsWelcome',':LazyExtras',':Tutor',':Lazy',':Mason',':Telescope find_files',':set relativenumber!',':set cursorline!',':set hlsearch!',':e bridge.rs',':vsplit',':terminal',':LspInfo',':Explore',':colorscheme necronomicon',':checkhealth nvs',':NvsStage 3',':NvsSettings'];
+function runEx(cmd){
+  const c = cmd.replace(/^:/,'').trim(); let m;
+  skill('cmd');
+  if (/^\d+$/.test(c)) { if (S.active && isCode(S.active)) { const f = cur(); f.row = Math.min(+c, f.lines.length)-1; f.col = 0; clampCol(); renderLight(); } return true; }
+  if (c==='w' || c==='write') { save(); return true; }
+  if (c==='wq' || c==='x') { save(); msg('Closing is disabled in the preview'); return true; }
+  if (/^q!?$|^quit$|^qa!?$/.test(c)) { msg('Closing is disabled in the preview'); return true; }
+  if ((m = c.match(/^se(?:t)?\s+(no)?([a-z]+)(!)?$/))) {
+    const id = VIMOPT[m[2]]; if (!id) { msg(`E518: Unknown option: ${m[2]}`, 'err'); return true; }
+    const v = m[3] ? !S.cfg[id] : !m[1]; applySetting(id, v);
+    msg(`${m[2]} ${v?'on':'off'}. It's also in Settings > ${SETMAP[id].c}.`, 'ok'); return true;
+  }
+  if ((m = c.match(/^e(?:dit)?\s+(\S+)$/))) { const n = m[1].split(/[\\/]/).pop(); openFile(n); return true; }
+  if (c==='Tutor' || c==='NvsTutor') { openTab('nvs-ide.tutor'); return true; }
+  if ((m = c.match(/^NvsAsk\s*(.*)$/))) { if (m[1]) askSubmit(m[1]); else openAsk(); return true; }
+  if (c==='NvsStage') { showView('learn'); return true; }
+  if (c==='NvsWelcome') { openTab('welcome'); return true; }
+  if ((m = c.match(/^NvsOllama\s*(on|off|status)?$/))) { if (m[1]==='on' || m[1]==='off') { applySetting('aiOn', m[1]==='on'); msg(`Local AI ${m[1]}`, 'ok'); } else openSettings('Local AI'); return true; }
+  if (c==='LazyExtras') { S.ptab = 'extras'; showView('plugins'); return true; }
+  if (c==='Lazy' || c==='Lazy update') { if (c==='Lazy update') updateAll(); showView('plugins'); return true; }
+  if (c==='Mason') { msg('mason.nvim: lua_ls, rust-analyzer, stylua installed'); return true; }
+  if (c.startsWith('Telescope')) { setTimeout(()=>openPalette('@')); return true; }
+  if (c==='vsplit' || c==='vs' || c==='split' || c==='sp') { msg('Splits arrive as separate grids through ext_multigrid. The preview shows one window.'); return true; }
+  if (c==='terminal' || c==='term') { showPanel('terminal'); return true; }
+  if (c==='LspInfo' || c==='checkhealth vim.lsp') { showPanel('output'); return true; }
+  if (c==='Explore' || c==='Ex') { showView('explorer'); return true; }
+  if (c.startsWith('colorscheme')) { openFile('necronomicon.lua'); return true; }
+  if (c.startsWith('checkhealth')) { showPanel('output'); msg('nvs.ide: bridge OK, 2 LSP clients, extension host ' + (hostRunning()?'running':'idle'), 'ok'); return true; }
+  if ((m = c.match(/^NvsStage\s+([1-4])$/))) { setStage(STAGES[+m[1]-1][0]); return true; }
+  if (c==='NvsSettings' || c==='Settings') { openSettings(); return true; }
+  if (c==='Trouble') { showPanel('problems'); return true; }
+  return false;
+}
+
+const P = { items:[], sel:0, mode:'' };
+function fuzzy(q, t){
+  if (!q) return { score:0, hit:[] };
+  const lq = q.toLowerCase(), lt = t.toLowerCase(); let i = 0; const hit = [];
+  for (let j=0;j<lt.length && i<lq.length;j++) if (lt[j]===lq[i]) { hit.push(j); i++; }
+  if (i<lq.length) return null;
+  const sub = lt.indexOf(lq); return { score: sub>=0 ? sub : 100 + hit[0] + (hit[hit.length-1]-hit[0]), hit: sub>=0 ? [...Array(lq.length)].map((_,k)=>sub+k) : hit };
+}
+function openPalette(prefix){ S.leader = false; hideWK(); $('pal').hidden = false; const inp = $('palin'); inp.value = prefix || ''; P.sel = 0; P.mode = (prefix||'')[0] || ''; filterPalette(); inp.focus(); }
+function closePalette(){ $('pal').hidden = true; focusCode(); }
+function filterPalette(){
+  const v = $('palin').value, pre = /^[:/@]/.test(v) ? v[0] : '', q = pre ? v.slice(1) : v.trim();
+  P.mode = pre;
+  let pool;
+  if (pre==='/') {
+    const f = S.active && isCode(S.active) ? cur() : null;
+    pool = f && q ? f.lines.map((l,i)=>({ t:`${i+1}: ${l.trim()}`, s:'line', k:'', v:'', row:i, col:l.toLowerCase().indexOf(q.toLowerCase()) })).filter(x=>x.col>=0) : [];
+    P.items = pool.map(c => ({ c, m:{ score:0, hit:[] } }));
+  } else if (pre==='@') {
+    pool = ALLFILES.map(x => ({ t:x.path, s:'file', k:FILES[x.name]?'':'not loaded', v:'', file:x.name }));
+    P.items = pool.map(c => ({ c, m:fuzzy(q, c.t) })).filter(x=>x.m).sort((a,b)=>a.m.score-b.m.score);
+  } else {
+    pool = CMDS().filter(c => pre===':' ? c.s==='ex' : true);
+    P.items = pool.map(c => ({ c, m:fuzzy(pre===':' ? ':'+q : q, c.t) })).filter(x=>x.m).sort((a,b)=>a.m.score-b.m.score);
+  }
+  P.sel = Math.min(P.sel, Math.max(0, P.items.length-1));
+  $('pallist').innerHTML = P.items.slice(0,60).map((x,i) => {
+    const t = [...x.c.t].map((ch,j) => x.m.hit.includes(j) ? `<mark>${esc(ch)}</mark>` : esc(ch)).join('');
+    const vk = S.cfg.vimCol && x.c.v ? x.c.v.replace('<leader>', leaderName()+' ') : '';
+    return `<li role="option" class="${i===P.sel?'on':''}" data-i="${i}"><span class="src ${x.c.s}">${x.c.s}</span><span class="lbl">${t}</span><span class="kb">${esc(x.c.k)}</span>${S.cfg.vimCol && pre===''?`<span class="vk">${esc(vk)}</span>`:''}</li>`;
+  }).join('') || `<li><span class="src ex">${pre==='/'?'line':pre==='@'?'file':'ex'}</span><span class="lbl">${pre===':' && q ? `Run :${esc(q)}` : pre==='/' ? (q ? 'No match in this file' : 'Type to search this file') : 'No matching commands'}</span></li>`;
+  $('palfoot').textContent = pre===':' ? 'Command line (ext_cmdline). :set rnu! and :42 work.' : pre==='/' ? 'Search this file. Enter jumps, then n and N.' : pre==='@' ? 'Find files (telescope.nvim)' : `${P.items.length} commands. Start with : for Ex, / to search, @ for files.`;
+  const on = $('pallist').querySelector('.on'); if (on) on.scrollIntoView({ block:'nearest' });
+}
+function runPalette(){
+  const v = $('palin').value, x = P.items[P.sel], pre = P.mode;
+  closePalette();
+  if (pre==='/') { const q = v.slice(1); if (!q) return; S.lastSearch = q; skill('search'); if (x) { const f = cur(); f.row = x.c.row; f.col = x.c.col; clampCol(); renderLight(); } else findNext(q, 1, true); return; }
+  if (pre==='@') { if (x) openFile(x.c.file); return; }
+  if (pre===':') { if (runEx(v)) return; if (x) return x.c.run(); msg(`E492: Not an editor command: ${v.slice(1)}`, 'err'); return; }
+  if (x) x.c.run();
+}
+$('palin').addEventListener('input', () => { P.sel = 0; if ($('palin').value==='' && P.mode) { closePalette(); return; } filterPalette(); });
+$('palin').addEventListener('keydown', e => {
+  const down = e.key==='ArrowDown' || (e.ctrlKey && (e.key==='j' || e.key==='n')), up = e.key==='ArrowUp' || (e.ctrlKey && (e.key==='k' || e.key==='p'));
+  if (down) { P.sel = Math.min(P.sel+1, P.items.length-1); filterPalette(); e.preventDefault(); }
+  else if (up) { P.sel = Math.max(P.sel-1, 0); filterPalette(); e.preventDefault(); }
+  else if (e.key==='Enter') { runPalette(); e.preventDefault(); }
+  else if (e.key==='Escape') { closePalette(); e.preventDefault(); e.stopPropagation(); }
+});
+$('pallist').addEventListener('click', e => { const li = e.target.closest('li[data-i]'); if (li) { P.sel = +li.dataset.i; runPalette(); } });
+$('palbtn').addEventListener('click', () => openPalette(''));
+
+/* ================= plugin actions ================= */
+function updateAll(){ const u = PLUGS.filter(p=>p.inst&&p.upd); u.forEach(p=>p.upd=false); msg(u.length ? `lazy.nvim: updated ${u.map(p=>p.nm).join(', ')} (lazy-lock.json changed)` : 'lazy.nvim: everything is up to date', 'ok'); render(); }
+function toggleInstall(id){
+  const p = PL[id], had = hostRunning();
+  if (!p.inst && p.src==='vsx' && p.tier==='t2' && S.cfg.exthost==='never') { msg('The extension host is set to Never in Settings > Plugins.', 'warn'); return; }
+  p.inst = !p.inst; if (!p.inst) p.on = true;
+  const now = hostRunning();
+  if (p.src==='extra') msg(p.inst ? `LazyVim: enabled extra ${p.x} (lazyvim.json updated)` : `LazyVim: disabled extra ${p.x}`, p.inst ? 'ok' : '');
+  else if (p.src==='nvim') msg(p.inst ? `lazy.nvim: installed ${p.nm}. Wrote lua/plugins/${p.nm.replace(/\.nvim$/,'')}.lua` : `lazy.nvim: removed ${p.nm}`, p.inst ? 'ok' : '');
+  else if (!had && now) msg(`Installed ${p.nm}. Extension host started.`, 'ok');
+  else if (had && !now) msg(`Removed ${p.nm}. Extension host stopped, since nothing needs it.`);
+  else msg(p.inst ? `Installed ${p.nm}.${p.tier==='t1' ? ' Converted at install, so the extension host stays off.' : ''}` : `Removed ${p.nm}`, p.inst ? 'ok' : '');
+  if (p.inst && p.src==='vsx' && p.alt && S.cfg.coach && st()!=='neovim') coach('alt-'+p.id, `${PL[p.alt].nm} does this natively, without the extension host.`);
+  render();
+}
+function doImport(){
+  S.imported = true;
+  Object.assign(S.cfg, { fs:14, relative:true, minimap:false, autosave:'delay', formatOnSave:true, tabstop:4 });
+  if (FILES['settings.lua']) syncSettingsFile();
+  msg('Imported 6 settings from VS Code. 2 had no equivalent.', 'ok'); render();
+}
+
+/* ================= events ================= */
+document.addEventListener('keydown', e => {
+  if (e.key==='F1') { e.preventDefault(); openAsk(); }
+  else if (e.ctrlKey && e.shiftKey && (e.key==='P' || e.key==='p')) { e.preventDefault(); openPalette(''); }
+});
+$('win').addEventListener('keydown', e => {
+  if (!$('pal').hidden) return;
+  const t = e.target;
+  if (t.id==='askq' && e.key==='Enter') { e.preventDefault(); askSubmit(t.value); return; }
+  if (t.matches('#sq,#pq,#cmsg,#stq,#askq') || (t.closest('.side') && t.matches('input,select'))) { if (e.key==='Escape') { $('side').contains(t) ? focusSide() : focusCode(); e.preventDefault(); } return; }
+  const vimStage = st()==='neovim';
+  if (!vimStage && e.ctrlKey && (e.key==='b' || e.key==='B')) { S.sidebar = !S.sidebar; render(); focusCode(); e.preventDefault(); coach('ctrl-b', `Ctrl+B toggled the sidebar. In Vim: ${leaderName()} then e.`); return; }
+  if (!vimStage && e.ctrlKey && e.key==='`') { S.panelOpen = !S.panelOpen; render(); focusCode(); e.preventDefault(); return; }
+  if (e.ctrlKey && e.key===',') { openSettings(); e.preventDefault(); return; }
+  if (e.key==='F5') { S.debugging ? stopDebug() : startDebug(); e.preventDefault(); return; }
+  if (e.key==='Escape' && S.leader) { S.leader = false; hideWK(); e.preventDefault(); return; }
+  let handled = false;
+  if (t.id==='code') handled = onEditorKey(e);
+  else if (t.id==='side' || $('side').contains(t)) { S.focus = 'side'; handled = onSideKey(e); }
+  else if (t.id==='pbody') { S.focus = 'panel'; handled = onPanelKey(e); }
+  else if ($('stab') && $('stab').contains(t)) handled = onFormKey(e, $('stab'));
+  else if ($('ptabv') && $('ptabv').contains(t)) handled = onFormKey(e, $('ptabv'));
+  if (handled) e.preventDefault();
+});
+$('win').addEventListener('focusin', e => {
+  const t = e.target, f = t.id==='code' || ($('ed').contains(t)) ? 'editor' : $('side').contains(t) ? 'side' : t.id==='pbody' ? 'panel' : S.focus;
+  if (f!==S.focus) { S.focus = f; if (f!=='side') sideRows().forEach(x=>x.classList.remove('kf')); renderStatus(); }
+});
+
+$('win').addEventListener('click', e => {
+  if (S.leader) { S.leader = false; hideWK(); }
+  const t = e.target.closest('[data-cmp],[data-ask],[data-try],#aitest,[data-view],[data-panel],[data-file],[data-dir],[data-tab],[data-close],[data-jump],[data-stage],[data-plug],[data-inst],[data-toggle],[data-upd],[data-ptab],[data-psrc],[data-stageset],[data-open],[data-setcat],[data-scope],[data-reset],#commit,#dstart,#dstop,#dcont,#dstep,#import,#importkb,.ln');
+  if (!t) return;
+  const d = t.dataset;
+  if ($('side').contains(t) && t.classList.contains('nav')) { S.sideSel = sideRows().indexOf(t); }
+  if (d.close) { e.stopPropagation(); closeTab(d.close); return; }
+  if (d.cmp) { acceptCmp(+d.cmp); focusCode(); return; }
+  if (d.ask) return askSubmit(d.ask);
+  if (d.try) return tryAnswer(d.try);
+  if (t.id==='aitest') return msg(`This preview can't reach your machine. In nvs.ide, :NvsOllama status asks ${S.cfg.aiUrl} for its models.`, 'warn');
+  if (t.id==='commit') {
+    const sg = gitChanges().filter(c => S.staged.has(c.path));
+    if (!sg.length) return msg('Nothing staged to commit', 'warn');
+    if (!S.commit.trim()) return msg('Write a commit message first', 'warn');
+    msg(`[main] ${S.commit.trim()} (${sg.length} file${sg.length>1?'s':''})`, 'ok'); S.commit = ''; S.staged.clear(); return render();
+  }
+  if (t.id==='dstart') return startDebug();
+  if (t.id==='dcont' || t.id==='dstop') return stopDebug();
+  if (t.id==='dstep') return msg('Stepped over to bridge.lua:6');
+  if (t.id==='import') return doImport();
+  if (t.id==='importkb') { msg('Imported 3 custom keybindings from VS Code. They apply at Stages 1 to 3.', 'ok'); return; }
+  if (d.open) return d.open==='settings' ? openSettings() : openTab(d.open);
+  if (d.setcat) return openSettings(d.setcat);
+  if (d.scope) { S.scope = d.scope; return renderEditor(); }
+  if (d.reset) { applySetting(d.reset, SETMAP[d.reset].def); return; }
+  if (d.stageset) { setStage(d.stageset); if (S.active==='welcome') renderEditor(); return; }
+  if (d.ptab) { S.ptab = d.ptab; return renderSide(); }
+  if (d.psrc) { S.psrc = d.psrc; return renderSide(); }
+  if (d.plug) return openTab('plug:' + d.plug);
+  if (d.inst) return toggleInstall(d.inst);
+  if (d.toggle) { const p = PL[d.toggle]; p.on = !p.on; msg(`${p.nm} ${p.on?'enabled':'disabled'} (enabled = ${p.on})`); return render(); }
+  if (d.upd) { PL[d.upd].upd = false; msg(`lazy.nvim: updated ${PL[d.upd].nm}`, 'ok'); return render(); }
+  if (d.view && !t.closest('.status')) return setView(d.view);
+  if (d.view) return showView(d.view);
+  if (d.panel) { if (S.panel===d.panel && S.panelOpen && !t.closest('.status')) { S.panelOpen = false; return render(); } return showPanel(d.panel); }
+  if (d.dir) { S.open.has(d.dir) ? S.open.delete(d.dir) : S.open.add(d.dir); return renderSide(); }
+  if (d.file) return openFile(d.file);
+  if (d.tab) { S.active = d.tab; S.mode = baseMode(); render(); return focusCode(); }
+  if (d.jump) { const [n, r, c] = d.jump.split(':'); return openFile(n, +r, +(c||0)); }
+  if (d.stage) { S.staged.has(d.stage) ? S.staged.delete(d.stage) : S.staged.add(d.stage); return render(); }
+  if (t.classList.contains('ln') && S.active && isCode(S.active)) {
+    const f = cur(), rect = $('lines').getBoundingClientRect(), g = gutterW(f), from = f.row;
+    f.row = +d.row; f.col = Math.floor((e.clientX - rect.left) / chW) - g.total;
+    if (S.mode==='VISUAL') S.mode = 'NORMAL';
+    clampCol(); renderLight(); focusCode();
+    if (Math.abs(f.row-from) >= 4 && st()!=='vscode' && S.mode==='NORMAL') coach('click-jump', `That click moved ${Math.abs(f.row-from)} lines. From the keyboard: ${Math.abs(f.row-from)}${f.row>from?'j':'k'}. The relative numbers show the count.`);
+  }
+});
+
+$('win').addEventListener('input', e => {
+  const id = e.target.id;
+  const keep = (key, fn) => { const pos = e.target.selectionStart; S[key] = e.target.value; fn(); const n = $(id); if (n) { n.focus(); n.setSelectionRange(pos,pos); } };
+  if (id==='sq') keep('search', renderSide);
+  else if (id==='pq') keep('pq', renderSide);
+  else if (id==='stq') keep('stq', renderEditor);
+  else if (id==='cmsg') S.commit = e.target.value;
+  else if (id==='askq') S.askq = e.target.value;
+});
+$('win').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.set) { const s = SETMAP[t.dataset.set]; applySetting(t.dataset.set, s.t==='bool' ? t.checked : t.value); const n = document.querySelector(`[data-set="${t.dataset.set}"]`); if (n) n.focus({ preventScroll:true }); return; }
+  if (t.dataset.popt) { const id = S.active.slice(5), o = PL[id].opts.find(x=>x[0]===t.dataset.popt);
+    POPT[id][o[0]] = o[1]==='bool' ? t.checked : o[1]==='number' ? +t.value : t.value;
+    const tid = t.id; renderEditor(); const n = $(tid); if (n) n.focus({ preventScroll:true }); }
+});
+
+S.mode = baseMode();
+S.chat.push({ q:'how do I delete a line', r:askSearch('how do I delete a line', 4), ai:false });
+render();
+})();
+</script>
+
+</body>
+</html>

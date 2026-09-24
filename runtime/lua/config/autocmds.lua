@@ -1,0 +1,1 @@
+-- Autocmds are loaded on the VeryLazy event. nvs.ide's own live in lua/nvs/.

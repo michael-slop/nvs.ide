@@ -1,0 +1,138 @@
+# Welcome to the nvs.ide lessons
+
+These lessons are for people who know VS Code and want Vim's keys. You practise
+in this buffer, and nothing here is saved, so experiment freely.
+
+When a line has a ✗ at the left, change it to match the instructions. The ✗
+turns into ✓ when it's right. If you mess something up, press `<Esc>`{normal}
+then `u`{normal} to undo.
+
+Stuck at any point? Press `<Space>?`{normal} and ask in plain words, like
+"delete a line".
+
+Press `j`{normal} a few times to scroll down to Lesson 1.
+
+# Lesson 1: MOVE WITHOUT THE ARROW KEYS
+
+** `h` left, `j` down, `k` up, `l` right. **
+
+          k
+      h       l
+          j
+
+Your right hand rests on these keys already, so moving never means reaching
+for the arrows.
+
+Put a number in front to repeat a move. `5j`{normal} goes down five lines. The
+numbers down the left side count the distance from your line, so you can read
+the number off and type it.
+
+Try it: jump down to Lesson 2 with a count.
+
+# Lesson 2: MODES
+
+VS Code has one mode: you type and text appears. Vim has a few:
+
+  Normal mode   keys are commands (move, delete, copy). You start here.
+  Insert mode   keys type text, like VS Code.
+  Visual mode   you select text, then act on it.
+
+The status bar shows the mode. `i`{normal} enters Insert mode before the cursor
+and `<Esc>`{normal} always takes you back to Normal mode.
+
+Put the cursor on the line below, after "missing", press `a`{normal} to append,
+type " word", then press `<Esc>`{normal}.
+
+There is one missing
+
+# Lesson 3: DELETING
+
+** `x` deletes a character. `dd` deletes a line. `dw` deletes a word. **
+
+Put the cursor on each doubled letter and press `x`{normal}:
+
+The ccow jumpedd over thhe moon.
+
+Delete the whole next line with `dd`{normal}:
+
+Delete this line with dd.
+
+Delete the extra words with `dw`{normal} on each one:
+
+This sentence has extra extra words words in it.
+
+VS Code users: `dd`{normal} is Ctrl+Shift+K. At Stages 1 to 3 both work.
+
+# Lesson 4: CHANGING
+
+** `ciw` changes the word under the cursor. **
+
+`c`{normal} means change, `iw` means inner word. It deletes the word and leaves
+you in Insert mode to type the new one. Change "red" to "green":
+
+The grass is red.
+
+The same pattern works on other things: `ci"`{normal} changes inside quotes and
+`ci(`{normal} inside parentheses. Change what's inside the quotes to hello:
+
+print("goodbye")
+
+Press `.`{normal} to repeat your last change somewhere else. That's Vim's
+answer to multiple cursors.
+
+# Lesson 5: COPY, PASTE, UNDO
+
+  `yy`   copies the line       (VS Code: Ctrl+C with nothing selected)
+  `p`    pastes below          (Ctrl+V)
+  `u`    undoes                (Ctrl+Z)
+  `<C-r>` redoes               (Ctrl+Y)
+
+Copy the line below with `yy`{normal} and paste it with `p`{normal} so there
+are two of them:
+
+Copy me.
+
+# Lesson 6: SEARCH AND SAVE
+
+Type `/moon`{normal} and Enter to find "moon" in Lesson 3. `n`{normal} jumps to
+the next match and `N`{normal} to the previous one.
+
+Type `:w`{normal} and Enter to save a real file (this lesson won't save). In
+nvs.ide, Ctrl+S saves too.
+
+# Lesson 7: THE LEADER KEY
+
+Most nvs.ide and LazyVim commands start with Space, called the leader key.
+Press `<Space>`{normal} and wait: a menu shows what comes next.
+
+  `<Space><Space>`  find a file         (VS Code: Ctrl+P)
+  `<Space>/`        search the project  (Ctrl+Shift+F)
+  `<Space>e`        file explorer       (Ctrl+B)
+  `<Space>gg`       git                 (Ctrl+Shift+G)
+  `<Space>?`        ask how to do something
+  `<Space>h`        harpoon: your pinned files
+
+# Lesson 8: CODE
+
+With a language server running (LazyVim sets them up):
+
+  `gd`         go to definition     (F12)
+  `gr`         find references      (Shift+F12)
+  `K`          show documentation   (hover)
+  `<Space>cr`  rename symbol        (F2)
+  `<Space>ca`  quick fix            (Ctrl+.)
+
+Suggestions pop up as you type in Insert mode. `<C-n>` and `<C-p>` move
+through them and Enter accepts.
+
+# Lesson 9: YOUR STAGE
+
+nvs.ide eases you in. `:NvsStage`{vim} picks how much Vim you want:
+
+  1  VS Code keys, no modes
+  2  Hybrid: files open in Insert mode, VS Code shortcuts work
+  3  Normal mode first, with Ctrl+S, Ctrl+Z, Ctrl+P and friends kept
+  4  Pure Neovim
+
+When you're comfortable with these lessons, try the next stage. For the full
+Vim course, run `:Tutor`{vim}.

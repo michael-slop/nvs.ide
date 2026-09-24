@@ -1,0 +1,1119 @@
+{
+ "version": 1,
+ "note": "Ask knowledge base for nvs.ide. Each entry answers one 'how do I...' question. 'q' holds phrasings and keywords used for matching; 'keys' is the Vim way, 'vscode' is what the user probably already knows, 'try' is an optional Ex command the Ask window can run for the user.",
+ "synonyms": {
+  "remove": "delete",
+  "erase": "delete",
+  "kill": "delete",
+  "cut": "delete",
+  "duplicate": "copy",
+  "yank": "copy",
+  "clone": "copy",
+  "put": "paste",
+  "leave": "exit",
+  "quit": "exit",
+  "close": "exit",
+  "escape": "exit",
+  "begin": "start",
+  "beginning": "start",
+  "front": "start",
+  "home": "start",
+  "finish": "end",
+  "last": "end",
+  "revert": "undo",
+  "back": "undo",
+  "find": "search",
+  "look": "search",
+  "grep": "search",
+  "locate": "search",
+  "swap": "replace",
+  "substitute": "replace",
+  "open": "open",
+  "switch": "switch",
+  "jump": "go",
+  "navigate": "go",
+  "goto": "go",
+  "folder": "file",
+  "files": "file",
+  "document": "file",
+  "tree": "explorer",
+  "sidebar": "explorer",
+  "store": "save",
+  "write": "save",
+  "highlight": "select",
+  "mark": "select",
+  "selection": "select",
+  "shell": "terminal",
+  "console": "terminal",
+  "cmd": "terminal",
+  "powershell": "terminal",
+  "definition": "definition",
+  "declaration": "definition",
+  "usages": "references",
+  "callers": "references",
+  "extension": "plugin",
+  "extensions": "plugin",
+  "addon": "plugin",
+  "plugins": "plugin",
+  "package": "plugin",
+  "preferences": "settings",
+  "config": "settings",
+  "configuration": "settings",
+  "option": "settings",
+  "options": "settings",
+  "autocomplete": "completion",
+  "intellisense": "completion",
+  "suggestions": "completion",
+  "suggest": "completion",
+  "ai": "ollama",
+  "llm": "ollama",
+  "model": "ollama",
+  "chatbot": "ollama",
+  "copilot": "ollama",
+  "lines": "line",
+  "words": "word",
+  "characters": "character",
+  "char": "character",
+  "letter": "character",
+  "tabs": "buffer",
+  "tab": "buffer",
+  "buffers": "buffer",
+  "panes": "window",
+  "pane": "window",
+  "split": "window",
+  "splits": "window",
+  "windows": "window"
+ },
+ "entries": [
+  {
+   "id": "exit-vim",
+   "cat": "Basics",
+   "q": [
+    "how do i exit vim",
+    "quit neovim",
+    "close the editor",
+    "get out of vim",
+    "exit"
+   ],
+   "a": "Press Esc to be sure you're in Normal mode, then type :q and Enter. :wq saves first, :q! throws away changes, and :qa quits everything.",
+   "keys": ":q",
+   "vscode": "Ctrl+Q"
+  },
+  {
+   "id": "modes",
+   "cat": "Basics",
+   "q": [
+    "what are modes",
+    "normal mode insert mode",
+    "why can't i type",
+    "keys do weird things",
+    "mode"
+   ],
+   "a": "Vim has modes. Normal mode is for moving and editing commands, Insert mode is for typing text, and Visual mode is for selecting. The status bar shows which one you're in. i enters Insert mode and Esc goes back to Normal.",
+   "keys": "i / Esc",
+   "vscode": "(VS Code has no modes)"
+  },
+  {
+   "id": "insert",
+   "cat": "Basics",
+   "q": [
+    "start typing",
+    "insert text",
+    "type text",
+    "enter insert mode",
+    "edit text"
+   ],
+   "a": "From Normal mode, press i to type before the cursor, a to type after it, A to type at the end of the line, I at the start, o to open a new line below and O above.",
+   "keys": "i a A I o O",
+   "vscode": "Just type"
+  },
+  {
+   "id": "leave-insert",
+   "cat": "Basics",
+   "q": [
+    "exit insert mode",
+    "get back to normal mode",
+    "stop typing",
+    "escape insert"
+   ],
+   "a": "Press Esc. If Esc feels far away, turn on 'jk leaves Insert mode' in Settings > Transition, then type j and k quickly.",
+   "keys": "Esc",
+   "vscode": "(no modes)"
+  },
+  {
+   "id": "save",
+   "cat": "Files",
+   "q": [
+    "save file",
+    "save my work",
+    "write file",
+    "save"
+   ],
+   "a": "Type :w and Enter. In nvs.ide, Ctrl+S also saves at every stage, because LazyVim maps it. :wa saves every open file.",
+   "keys": ":w",
+   "vscode": "Ctrl+S",
+   "try": "write"
+  },
+  {
+   "id": "save-all",
+   "cat": "Files",
+   "q": [
+    "save all files",
+    "save everything"
+   ],
+   "a": "Type :wa and Enter to write every changed file.",
+   "keys": ":wa",
+   "vscode": "Ctrl+K S",
+   "try": "wall"
+  },
+  {
+   "id": "find-file",
+   "cat": "Files",
+   "q": [
+    "open a file",
+    "find a file",
+    "search file by name",
+    "quick open",
+    "go to file"
+   ],
+   "a": "Press Space Space (or Space f f) to fuzzy-find a file in the project, like Ctrl+P in VS Code. Type part of the name and press Enter.",
+   "keys": "<leader><space>",
+   "vscode": "Ctrl+P"
+  },
+  {
+   "id": "recent",
+   "cat": "Files",
+   "q": [
+    "recent files",
+    "recently opened",
+    "file history"
+   ],
+   "a": "Space f r lists recently opened files.",
+   "keys": "<leader>fr",
+   "vscode": "Ctrl+R"
+  },
+  {
+   "id": "explorer",
+   "cat": "Files",
+   "q": [
+    "file explorer",
+    "show sidebar",
+    "file tree",
+    "toggle explorer",
+    "see my files"
+   ],
+   "a": "Space e toggles the file explorer. Inside it, j and k move, l or Enter opens, h closes a folder, a creates a file, d deletes and r renames.",
+   "keys": "<leader>e",
+   "vscode": "Ctrl+B / Ctrl+Shift+E"
+  },
+  {
+   "id": "new-file",
+   "cat": "Files",
+   "q": [
+    "create a new file",
+    "new file",
+    "make a file"
+   ],
+   "a": "Type :e followed by the new file name, like :e notes.md, then save with :w. In the explorer (Space e), press a.",
+   "keys": ":e name",
+   "vscode": "Ctrl+N"
+  },
+  {
+   "id": "rename-file",
+   "cat": "Files",
+   "q": [
+    "rename a file",
+    "rename file",
+    "move a file"
+   ],
+   "a": "Open the explorer with Space e, put the cursor on the file and press r.",
+   "keys": "<leader>e then r",
+   "vscode": "F2 in the explorer"
+  },
+  {
+   "id": "close-buffer",
+   "cat": "Files",
+   "q": [
+    "close file",
+    "close tab",
+    "close this buffer",
+    "close current file"
+   ],
+   "a": "Space b d closes the current buffer (Vim's word for an open file). Space b o closes all the others.",
+   "keys": "<leader>bd",
+   "vscode": "Ctrl+W"
+  },
+  {
+   "id": "switch-buffer",
+   "cat": "Files",
+   "q": [
+    "switch between open files",
+    "next tab",
+    "previous tab",
+    "switch buffer",
+    "go to other file"
+   ],
+   "a": "Shift+L goes to the next open file and Shift+H to the previous one. Space , lists all open buffers.",
+   "keys": "H / L",
+   "vscode": "Ctrl+Tab / Ctrl+PgDn"
+  },
+  {
+   "id": "harpoon",
+   "cat": "Files",
+   "q": [
+    "bookmark files",
+    "pin a file",
+    "harpoon",
+    "favorite files",
+    "quick switch files"
+   ],
+   "a": "Harpoon keeps a short list of files you jump between. Space H adds the current file, Space h opens the list, and Space 1 to Space 9 jump straight to a slot.",
+   "keys": "<leader>H, <leader>h, <leader>1..9",
+   "vscode": "(pinned tabs)"
+  },
+  {
+   "id": "hjkl",
+   "cat": "Moving",
+   "q": [
+    "move the cursor",
+    "move around",
+    "arrow keys",
+    "hjkl",
+    "move left right up down"
+   ],
+   "a": "h moves left, j down, k up and l right. Put a number first to repeat: 5j moves five lines down. The relative line numbers on the left tell you that number.",
+   "keys": "h j k l",
+   "vscode": "Arrow keys"
+  },
+  {
+   "id": "word",
+   "cat": "Moving",
+   "q": [
+    "move by word",
+    "next word",
+    "previous word",
+    "jump words"
+   ],
+   "a": "w jumps to the start of the next word, b back to the previous word, and e to the end of the word.",
+   "keys": "w b e",
+   "vscode": "Ctrl+Right / Ctrl+Left"
+  },
+  {
+   "id": "line-ends",
+   "cat": "Moving",
+   "q": [
+    "start of line",
+    "end of line",
+    "go to line start",
+    "go to line end",
+    "beginning of line"
+   ],
+   "a": "0 goes to the very start of the line, ^ to the first non-blank character, and $ to the end.",
+   "keys": "0 ^ $",
+   "vscode": "Home / End"
+  },
+  {
+   "id": "file-ends",
+   "cat": "Moving",
+   "q": [
+    "top of file",
+    "bottom of file",
+    "start of file",
+    "end of file",
+    "first line",
+    "last line"
+   ],
+   "a": "gg goes to the first line and G to the last.",
+   "keys": "gg / G",
+   "vscode": "Ctrl+Home / Ctrl+End"
+  },
+  {
+   "id": "goto-line",
+   "cat": "Moving",
+   "q": [
+    "go to line number",
+    "jump to line",
+    "line 42",
+    "go to line"
+   ],
+   "a": "Type the number then G (42G), or type :42 and Enter.",
+   "keys": "42G or :42",
+   "vscode": "Ctrl+G"
+  },
+  {
+   "id": "page",
+   "cat": "Moving",
+   "q": [
+    "page down",
+    "page up",
+    "scroll half page",
+    "scroll down",
+    "scroll up"
+   ],
+   "a": "Ctrl+D scrolls half a page down and Ctrl+U half a page up. Ctrl+F and Ctrl+B move a full page, except at Stages 1 to 3 where those keep their VS Code meaning.",
+   "keys": "Ctrl+D / Ctrl+U",
+   "vscode": "PgDn / PgUp"
+  },
+  {
+   "id": "jump-back",
+   "cat": "Moving",
+   "q": [
+    "go back to where i was",
+    "previous location",
+    "jump back",
+    "go forward"
+   ],
+   "a": "Ctrl+O jumps back to where you were and Ctrl+I jumps forward again.",
+   "keys": "Ctrl+O / Ctrl+I",
+   "vscode": "Alt+Left / Alt+Right"
+  },
+  {
+   "id": "bracket",
+   "cat": "Moving",
+   "q": [
+    "matching bracket",
+    "jump to matching parenthesis",
+    "other brace"
+   ],
+   "a": "% jumps to the bracket, brace or parenthesis matching the one under the cursor.",
+   "keys": "%",
+   "vscode": "Ctrl+Shift+\\"
+  },
+  {
+   "id": "flash",
+   "cat": "Moving",
+   "q": [
+    "jump anywhere on screen",
+    "jump to a word i can see",
+    "flash"
+   ],
+   "a": "Press s, then type the first two letters of where you want to go. Labels appear on every match; press the label to jump. This comes from flash.nvim.",
+   "keys": "s",
+   "vscode": "(no equivalent)"
+  },
+  {
+   "id": "delete-char",
+   "cat": "Editing",
+   "q": [
+    "delete a character",
+    "delete letter",
+    "remove a character"
+   ],
+   "a": "x deletes the character under the cursor. 3x deletes three.",
+   "keys": "x",
+   "vscode": "Delete"
+  },
+  {
+   "id": "delete-line",
+   "cat": "Editing",
+   "q": [
+    "delete a line",
+    "remove this line",
+    "delete line",
+    "delete the whole line"
+   ],
+   "a": "dd deletes the current line. 3dd deletes three lines. What you delete is kept, so p pastes it back somewhere else.",
+   "keys": "dd",
+   "vscode": "Ctrl+Shift+K"
+  },
+  {
+   "id": "delete-word",
+   "cat": "Editing",
+   "q": [
+    "delete a word",
+    "remove word",
+    "delete word"
+   ],
+   "a": "dw deletes from the cursor to the start of the next word. diw deletes the whole word the cursor is on.",
+   "keys": "dw / diw",
+   "vscode": "Ctrl+Delete"
+  },
+  {
+   "id": "delete-to-end",
+   "cat": "Editing",
+   "q": [
+    "delete to end of line",
+    "delete rest of line"
+   ],
+   "a": "D (or d$) deletes from the cursor to the end of the line.",
+   "keys": "D",
+   "vscode": "Ctrl+K (with an extension)"
+  },
+  {
+   "id": "change-word",
+   "cat": "Editing",
+   "q": [
+    "change a word",
+    "replace word",
+    "retype word",
+    "change inside quotes",
+    "change inside parentheses"
+   ],
+   "a": "ciw deletes the word under the cursor and puts you in Insert mode to type the new one. The same idea works with other targets: ci\" changes inside quotes, ci( inside parentheses.",
+   "keys": "ciw / ci\" / ci(",
+   "vscode": "Double-click then type"
+  },
+  {
+   "id": "replace-char",
+   "cat": "Editing",
+   "q": [
+    "replace one character",
+    "change a letter",
+    "fix a typo"
+   ],
+   "a": "r then a character replaces the one under the cursor without entering Insert mode.",
+   "keys": "r",
+   "vscode": "Select and type"
+  },
+  {
+   "id": "undo",
+   "cat": "Editing",
+   "q": [
+    "undo",
+    "undo change",
+    "take back",
+    "revert change"
+   ],
+   "a": "u undoes the last change. At Stages 1 to 3, Ctrl+Z works too.",
+   "keys": "u",
+   "vscode": "Ctrl+Z"
+  },
+  {
+   "id": "redo",
+   "cat": "Editing",
+   "q": [
+    "redo",
+    "redo change"
+   ],
+   "a": "Ctrl+R redoes what u undid.",
+   "keys": "Ctrl+R",
+   "vscode": "Ctrl+Y / Ctrl+Shift+Z"
+  },
+  {
+   "id": "repeat",
+   "cat": "Editing",
+   "q": [
+    "repeat last change",
+    "do that again",
+    "repeat command"
+   ],
+   "a": ". (a dot) repeats your last change. Change one word with ciw, move to another and press . to change it the same way.",
+   "keys": ".",
+   "vscode": "(no equivalent)"
+  },
+  {
+   "id": "copy-line",
+   "cat": "Editing",
+   "q": [
+    "copy a line",
+    "copy line",
+    "yank line",
+    "duplicate line"
+   ],
+   "a": "yy copies the current line. p pastes it below and P above. yyp duplicates a line in one go.",
+   "keys": "yy then p",
+   "vscode": "Ctrl+C / Shift+Alt+Down"
+  },
+  {
+   "id": "copy-selection",
+   "cat": "Editing",
+   "q": [
+    "copy selection",
+    "copy text",
+    "copy word",
+    "copy to clipboard",
+    "system clipboard"
+   ],
+   "a": "Select with v, then press y to copy. nvs.ide shares the system clipboard, so Ctrl+V in other apps pastes it.",
+   "keys": "v … y",
+   "vscode": "Ctrl+C"
+  },
+  {
+   "id": "paste",
+   "cat": "Editing",
+   "q": [
+    "paste",
+    "paste text",
+    "paste from clipboard"
+   ],
+   "a": "p pastes after the cursor and P before it. In Insert mode, Ctrl+R then + pastes the system clipboard.",
+   "keys": "p / P",
+   "vscode": "Ctrl+V"
+  },
+  {
+   "id": "move-line",
+   "cat": "Editing",
+   "q": [
+    "move line up",
+    "move line down",
+    "move a line",
+    "swap lines"
+   ],
+   "a": "Alt+J moves the current line (or selection) down and Alt+K moves it up.",
+   "keys": "Alt+J / Alt+K",
+   "vscode": "Alt+Down / Alt+Up"
+  },
+  {
+   "id": "indent",
+   "cat": "Editing",
+   "q": [
+    "indent",
+    "unindent",
+    "indent line",
+    "tab a line",
+    "outdent"
+   ],
+   "a": ">> indents the line and << unindents it. In Visual mode, > and < shift the selection and keep it selected.",
+   "keys": ">> / <<",
+   "vscode": "Tab / Shift+Tab"
+  },
+  {
+   "id": "join",
+   "cat": "Editing",
+   "q": [
+    "join lines",
+    "merge lines",
+    "combine two lines"
+   ],
+   "a": "J joins the next line onto the end of this one.",
+   "keys": "J",
+   "vscode": "Ctrl+J"
+  },
+  {
+   "id": "case",
+   "cat": "Editing",
+   "q": [
+    "change case",
+    "uppercase",
+    "lowercase",
+    "toggle case",
+    "capitalize"
+   ],
+   "a": "~ flips the case of the character under the cursor. In Visual mode, U makes the selection uppercase and u lowercase.",
+   "keys": "~ / U / u",
+   "vscode": "Transform commands in the palette"
+  },
+  {
+   "id": "comment",
+   "cat": "Editing",
+   "q": [
+    "comment a line",
+    "comment out",
+    "uncomment",
+    "toggle comment"
+   ],
+   "a": "gcc comments or uncomments the current line. In Visual mode, gc does the selection. At Stages 1 to 3, Ctrl+/ works as well.",
+   "keys": "gcc / gc",
+   "vscode": "Ctrl+/"
+  },
+  {
+   "id": "surround",
+   "cat": "Editing",
+   "q": [
+    "surround with quotes",
+    "add brackets around",
+    "wrap in parentheses",
+    "change surrounding quotes",
+    "delete surrounding",
+    "wrap word in quotes",
+    "put quotes around",
+    "wrap in quotes",
+    "add parentheses around"
+   ],
+   "a": "gsa adds a surround (gsaiw\" wraps the word in quotes), gsd deletes one and gsr replaces one. This comes from mini.surround.",
+   "keys": "gsa / gsd / gsr",
+   "vscode": "(select, then type a quote)"
+  },
+  {
+   "id": "multi-cursor",
+   "cat": "Editing",
+   "q": [
+    "multiple cursors",
+    "multi cursor",
+    "edit several lines at once",
+    "add cursor"
+   ],
+   "a": "Vim does this differently. For a column, press Ctrl+V, select down with j, then I, type, and Esc: the text appears on every line. To change each match of a word, press * on it, then cgn, type, Esc, and press . for each next match.",
+   "keys": "Ctrl+V … I / * cgn .",
+   "vscode": "Alt+Click / Ctrl+D"
+  },
+  {
+   "id": "macro",
+   "cat": "Editing",
+   "q": [
+    "record a macro",
+    "repeat a sequence",
+    "macro",
+    "automate edits"
+   ],
+   "a": "qa starts recording into register a, q stops. @a plays it back, and 10@a plays it ten times.",
+   "keys": "qa … q, @a",
+   "vscode": "(needs an extension)"
+  },
+  {
+   "id": "visual",
+   "cat": "Selecting",
+   "q": [
+    "select text",
+    "highlight text",
+    "visual mode",
+    "select characters"
+   ],
+   "a": "v starts selecting character by character, V selects whole lines, and Ctrl+V selects a block (a column). Move to grow the selection, then act on it: d deletes, y copies, c changes.",
+   "keys": "v / V / Ctrl+V",
+   "vscode": "Shift+Arrows"
+  },
+  {
+   "id": "select-all",
+   "cat": "Selecting",
+   "q": [
+    "select all",
+    "select everything",
+    "select whole file"
+   ],
+   "a": "ggVG selects the whole file: go to the top, start a line selection, go to the bottom.",
+   "keys": "ggVG",
+   "vscode": "Ctrl+A"
+  },
+  {
+   "id": "select-word",
+   "cat": "Selecting",
+   "q": [
+    "select a word",
+    "select inside quotes",
+    "select inside brackets",
+    "select paragraph"
+   ],
+   "a": "viw selects the word under the cursor, vi\" inside quotes, vi( inside parentheses and vip the paragraph.",
+   "keys": "viw / vi\" / vip",
+   "vscode": "Double-click / Ctrl+Shift+Right"
+  },
+  {
+   "id": "search-file",
+   "cat": "Search",
+   "q": [
+    "search in current file",
+    "find text in current file",
+    "find word",
+    "search for text",
+    "find next match"
+   ],
+   "a": "Type / then the text and Enter. n goes to the next match and N to the previous. * searches for the word under the cursor.",
+   "keys": "/text, n, N, *",
+   "vscode": "Ctrl+F"
+  },
+  {
+   "id": "search-project",
+   "cat": "Search",
+   "q": [
+    "search in project",
+    "search all files",
+    "find in all files",
+    "grep project",
+    "global search",
+    "search every file"
+   ],
+   "a": "Space / (or Space s g) searches every file in the project as you type.",
+   "keys": "<leader>/",
+   "vscode": "Ctrl+Shift+F"
+  },
+  {
+   "id": "replace-file",
+   "cat": "Search",
+   "q": [
+    "find and replace",
+    "replace text in current file",
+    "substitute in current file",
+    "replace every match here"
+   ],
+   "a": "Type :%s/old/new/g and Enter to replace every match in the file. Add c at the end (/gc) to confirm each one.",
+   "keys": ":%s/old/new/g",
+   "vscode": "Ctrl+H"
+  },
+  {
+   "id": "replace-project",
+   "cat": "Search",
+   "q": [
+    "replace in project",
+    "replace in all files",
+    "rename across files"
+   ],
+   "a": "Space s r opens a search-and-replace panel for the whole project (grug-far).",
+   "keys": "<leader>sr",
+   "vscode": "Ctrl+Shift+H"
+  },
+  {
+   "id": "clear-highlight",
+   "cat": "Search",
+   "q": [
+    "clear search highlight",
+    "remove highlight",
+    "stop highlighting"
+   ],
+   "a": "Press Esc in Normal mode. LazyVim clears the search highlight for you.",
+   "keys": "Esc",
+   "vscode": "Esc"
+  },
+  {
+   "id": "split",
+   "cat": "Windows",
+   "q": [
+    "split window",
+    "split screen",
+    "side by side",
+    "open two files",
+    "split vertically",
+    "split horizontally"
+   ],
+   "a": "Space | splits the window side by side and Space - splits it top and bottom. Space w d closes the current split.",
+   "keys": "<leader>| / <leader>-",
+   "vscode": "Ctrl+\\"
+  },
+  {
+   "id": "window-move",
+   "cat": "Windows",
+   "q": [
+    "move between windows",
+    "switch split",
+    "go to other window",
+    "focus sidebar",
+    "move between panes"
+   ],
+   "a": "Ctrl+H, Ctrl+J, Ctrl+K and Ctrl+L move to the window on the left, below, above and right. The long form is Ctrl+W then h, j, k or l.",
+   "keys": "Ctrl+H/J/K/L",
+   "vscode": "Ctrl+1 / Ctrl+2"
+  },
+  {
+   "id": "terminal",
+   "cat": "Tools",
+   "q": [
+    "open terminal",
+    "toggle terminal",
+    "run a command",
+    "integrated terminal"
+   ],
+   "a": "Space f t opens a terminal. Inside it you're typing into the shell; press Ctrl+\\ then Ctrl+N to get back to Normal mode so you can scroll and copy.",
+   "keys": "<leader>ft",
+   "vscode": "Ctrl+`"
+  },
+  {
+   "id": "command-palette",
+   "cat": "Tools",
+   "q": [
+    "command palette",
+    "run a command",
+    "list commands",
+    "all commands"
+   ],
+   "a": "Space s C searches every command. Typing : opens the command line for Ex commands like :w or :set.",
+   "keys": "<leader>sC or :",
+   "vscode": "Ctrl+Shift+P"
+  },
+  {
+   "id": "keymaps",
+   "cat": "Tools",
+   "q": [
+    "show keybindings",
+    "what keys are there",
+    "list shortcuts",
+    "cheat sheet",
+    "keymaps"
+   ],
+   "a": "Press Space and wait: which-key shows every leader shortcut, grouped. Space s k searches all keymaps.",
+   "keys": "<leader> (wait), <leader>sk",
+   "vscode": "Ctrl+K Ctrl+S"
+  },
+  {
+   "id": "help",
+   "cat": "Tools",
+   "q": [
+    "help",
+    "documentation",
+    "read the docs",
+    "manual"
+   ],
+   "a": ":h followed by a topic opens Neovim's built-in help, for example :h motion. Space s h searches all help pages.",
+   "keys": ":h topic",
+   "vscode": "F1"
+  },
+  {
+   "id": "tutor",
+   "cat": "Tools",
+   "q": [
+    "tutorial",
+    "learn vim",
+    "practice",
+    "lessons",
+    "vimtutor"
+   ],
+   "a": ":NvsTutor opens the nvs.ide lessons, which you practise in a real buffer. :Tutor opens Neovim's own full tutorial.",
+   "keys": ":NvsTutor",
+   "vscode": "(Get Started page)",
+   "try": "NvsTutor"
+  },
+  {
+   "id": "stage",
+   "cat": "nvs.ide",
+   "q": [
+    "change stage",
+    "more vim",
+    "less vim",
+    "vscode keys",
+    "keybinding stage",
+    "turn off vim keys"
+   ],
+   "a": ":NvsStage 1 gives you VS Code keys, 2 is Hybrid, 3 is Modal with a safety net, 4 is pure Neovim. The coach hints go quiet at Stage 4.",
+   "keys": ":NvsStage 1-4",
+   "vscode": "(Keymap extensions)",
+   "try": "NvsStage"
+  },
+  {
+   "id": "definition",
+   "cat": "Code",
+   "q": [
+    "go to definition",
+    "jump to definition",
+    "where is this defined",
+    "open declaration"
+   ],
+   "a": "gd jumps to the definition of the symbol under the cursor. Ctrl+O brings you back.",
+   "keys": "gd",
+   "vscode": "F12"
+  },
+  {
+   "id": "references",
+   "cat": "Code",
+   "q": [
+    "find references",
+    "find usages",
+    "who calls this",
+    "where is this used"
+   ],
+   "a": "gr lists every reference to the symbol under the cursor.",
+   "keys": "gr",
+   "vscode": "Shift+F12"
+  },
+  {
+   "id": "rename",
+   "cat": "Code",
+   "q": [
+    "rename symbol",
+    "rename variable",
+    "rename function",
+    "refactor name"
+   ],
+   "a": "Space c r renames the symbol under the cursor everywhere the language server knows about.",
+   "keys": "<leader>cr",
+   "vscode": "F2"
+  },
+  {
+   "id": "code-action",
+   "cat": "Code",
+   "q": [
+    "quick fix",
+    "code action",
+    "fix this error",
+    "lightbulb"
+   ],
+   "a": "Space c a shows code actions and quick fixes for the cursor position.",
+   "keys": "<leader>ca",
+   "vscode": "Ctrl+."
+  },
+  {
+   "id": "hover",
+   "cat": "Code",
+   "q": [
+    "show documentation",
+    "hover info",
+    "what is this function",
+    "show type"
+   ],
+   "a": "K shows the documentation and type of the symbol under the cursor.",
+   "keys": "K",
+   "vscode": "Hover / Ctrl+K Ctrl+I"
+  },
+  {
+   "id": "format",
+   "cat": "Code",
+   "q": [
+    "format file",
+    "format code",
+    "prettier",
+    "auto format",
+    "beautify"
+   ],
+   "a": "Space c f formats the file. LazyVim also formats on save; Space u f turns that off.",
+   "keys": "<leader>cf",
+   "vscode": "Shift+Alt+F"
+  },
+  {
+   "id": "diagnostics",
+   "cat": "Code",
+   "q": [
+    "show errors",
+    "next error",
+    "problems panel",
+    "list warnings",
+    "diagnostics"
+   ],
+   "a": "]d and [d jump to the next and previous problem. Space x x opens a list of every problem (Trouble). Space c d shows the full message for the current line.",
+   "keys": "]d [d, <leader>xx",
+   "vscode": "F8 / Ctrl+Shift+M"
+  },
+  {
+   "id": "completion",
+   "cat": "Code",
+   "q": [
+    "autocomplete",
+    "accept suggestion",
+    "completion menu",
+    "intellisense",
+    "code completion"
+   ],
+   "a": "Suggestions appear as you type. Ctrl+N and Ctrl+P (or the arrow keys) move through them, Enter accepts, and Ctrl+Space opens the menu by hand. If a local model is on, grey ghost text shows a longer suggestion; Alt+A accepts it.",
+   "keys": "Enter, Ctrl+N/P, Ctrl+Space",
+   "vscode": "Tab / Enter"
+  },
+  {
+   "id": "snippets",
+   "cat": "Code",
+   "q": [
+    "snippets",
+    "insert snippet",
+    "expand snippet"
+   ],
+   "a": "Snippets appear in the completion menu with a snippet icon. Accept one with Enter, then Tab jumps to the next placeholder.",
+   "keys": "Enter, Tab",
+   "vscode": "Tab"
+  },
+  {
+   "id": "fold",
+   "cat": "Code",
+   "q": [
+    "fold code",
+    "collapse function",
+    "unfold",
+    "hide block"
+   ],
+   "a": "za toggles the fold under the cursor, zM closes all folds and zR opens them all.",
+   "keys": "za / zM / zR",
+   "vscode": "Ctrl+Shift+["
+  },
+  {
+   "id": "git-ui",
+   "cat": "Git",
+   "q": [
+    "git",
+    "commit",
+    "git status",
+    "stage changes",
+    "push",
+    "lazygit",
+    "source control"
+   ],
+   "a": "Space g g opens lazygit, a full git interface: space stages a file, c commits, P pushes. (lazygit has to be installed.)",
+   "keys": "<leader>gg",
+   "vscode": "Ctrl+Shift+G"
+  },
+  {
+   "id": "git-hunk",
+   "cat": "Git",
+   "q": [
+    "stage a hunk",
+    "stage these lines",
+    "next change",
+    "git blame",
+    "who changed this line"
+   ],
+   "a": "]h and [h jump between changed blocks, Space g h s stages the block under the cursor and Space g h b shows who last changed the line.",
+   "keys": "]h, <leader>ghs, <leader>ghb",
+   "vscode": "Gutter clicks / GitLens"
+  },
+  {
+   "id": "plugins",
+   "cat": "nvs.ide",
+   "q": [
+    "install a plugin",
+    "add extension",
+    "manage plugins",
+    "update plugins",
+    "lazy"
+   ],
+   "a": ":Lazy opens the plugin manager (U updates everything). :LazyExtras switches on ready-made bundles such as language support. In the nvs.ide window, the Plugins view does the same with buttons.",
+   "keys": ":Lazy, :LazyExtras",
+   "vscode": "Ctrl+Shift+X",
+   "try": "Lazy"
+  },
+  {
+   "id": "language",
+   "cat": "nvs.ide",
+   "q": [
+    "add language support",
+    "python support",
+    "rust support",
+    "typescript support",
+    "install language server",
+    "mason"
+   ],
+   "a": ":LazyExtras has a lang section (lang.python, lang.rust, lang.typescript and more); press x on one to enable it. :Mason installs individual servers, linters and formatters.",
+   "keys": ":LazyExtras, :Mason",
+   "vscode": "Install the language extension",
+   "try": "LazyExtras"
+  },
+  {
+   "id": "settings",
+   "cat": "nvs.ide",
+   "q": [
+    "change settings",
+    "open settings",
+    "set an option",
+    "turn on line numbers",
+    "relative numbers"
+   ],
+   "a": ":set changes an option for now, for example :set relativenumber! toggles relative numbers. To keep it, add it to lua/config/options.lua, or use the Settings screen in the nvs.ide window, which writes that file for you.",
+   "keys": ":set option",
+   "vscode": "Ctrl+,"
+  },
+  {
+   "id": "theme",
+   "cat": "nvs.ide",
+   "q": [
+    "change theme",
+    "color scheme",
+    "dark theme",
+    "change colors"
+   ],
+   "a": "Space u C previews and switches colour schemes. nvs.ide ships with necronomicon.",
+   "keys": "<leader>uC",
+   "vscode": "Ctrl+K Ctrl+T"
+  },
+  {
+   "id": "ollama",
+   "cat": "nvs.ide",
+   "q": [
+    "use ollama",
+    "local model",
+    "ai assistant",
+    "ask the ai",
+    "ai completion",
+    "chatbot"
+   ],
+   "a": "Turn it on with :NvsOllama on (or Settings > Local AI). nvs.ide talks to Ollama at http://localhost:11434. The Ask window uses it when none of its written answers match, and ghost-text completion uses it for longer suggestions. If Ollama runs on another machine, forward port 11434 over SSH and keep the default address.",
+   "keys": ":NvsOllama on",
+   "vscode": "(Copilot)"
+  },
+  {
+   "id": "ask",
+   "cat": "nvs.ide",
+   "q": [
+    "ask a question",
+    "how do i",
+    "how to",
+    "ask"
+   ],
+   "a": "Space ? (or F1 at Stages 1 to 3) opens Ask. Type a question in plain words, like 'delete a line' or 'split the screen'.",
+   "keys": "<leader>?",
+   "vscode": "(search the web)"
+  }
+ ]
+}

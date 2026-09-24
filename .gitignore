@@ -1,0 +1,9 @@
+# Written by lazy.nvim when the runtime is used as a config folder
+runtime/lazy-lock.json
+runtime/lazyvim.json
+
+# Rust shell (Phase 1)
+shell/target/
+
+.DS_Store
+Thumbs.db
