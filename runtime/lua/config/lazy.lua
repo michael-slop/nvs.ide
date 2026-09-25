@@ -20,6 +20,8 @@ require("lazy").setup({
     -- Extras nvs.ide turns on for everyone. More are one keypress away in :LazyExtras.
     { import = "lazyvim.plugins.extras.editor.harpoon2" },
     { import = "lazyvim.plugins.extras.coding.mini-surround" },
+    -- Markdown: rendered in the buffer (render-markdown.nvim) and live in a browser (markdown-preview.nvim).
+    { import = "lazyvim.plugins.extras.lang.markdown" },
     { import = "plugins" },
   },
   defaults = { lazy = false, version = false },

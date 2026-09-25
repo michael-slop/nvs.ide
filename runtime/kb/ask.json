@@ -86,7 +86,12 @@
   "gguf": "model",
   "models": "model",
   "llama": "localai",
-  "huggingface": "download"
+  "huggingface": "download",
+  "md": "markdown",
+  "readme": "markdown",
+  "render": "preview",
+  "rendered": "preview",
+  "view": "preview"
  },
  "entries": [
   {
@@ -1138,6 +1143,22 @@
    "keys": ":NvsModel",
    "vscode": "(no equivalent)",
    "try": "NvsModel"
+  },
+  {
+   "id": "markdown-preview",
+   "cat": "Files",
+   "q": [
+    "preview markdown",
+    "markdown preview",
+    "render markdown",
+    "view readme",
+    "see formatted markdown",
+    "open markdown in browser"
+   ],
+   "a": "Markdown renders right in the editor: headings, lists, tables, checkboxes and code blocks are drawn as you read, and the raw text comes back on the line you're editing. Space u m turns that on and off. Space c p opens a live preview in your browser that scrolls along with the cursor.",
+   "keys": "<leader>um, <leader>cp",
+   "vscode": "Ctrl+Shift+V / Ctrl+K V",
+   "try": "RenderMarkdown toggle"
   }
  ]
 }

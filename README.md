@@ -20,6 +20,9 @@ time:
 - **Lessons**: `:NvsTutor` runs nine interactive lessons in a real buffer.
 - **Completion**: LazyVim's blink.cmp menu with documentation, plus optional
   ghost-text suggestions from a local model.
+- **Markdown renderer**: headings, tables, checkboxes and code blocks render
+  right in the editor (`Space u m` toggles), and `Space c p` opens a live
+  browser preview that follows your cursor.
 - **Local AI, any model, no Ollama required**: nvs.ide runs llama.cpp itself and
   loads any GGUF model, including ones it downloads from Hugging Face for you. Ask
   falls back to the model when the guide has no answer, and ghost text uses it
@@ -121,9 +124,9 @@ scripts/try.ps1         run the runtime next to your own config
 
 ## Tests
 
-`tests/verify.lua` runs 28 headless checks against a sandboxed install: commands,
+`tests/verify.lua` runs 31 headless checks against a sandboxed install: commands,
 stage keymaps (and restoring LazyVim's own at Stage 4), saved state and its
-migration, the lessons, and Ask. `tests/ai_live.lua` runs 11 more against a real
+migration, the lessons, Ask, and the Markdown renderer. `tests/ai_live.lua` runs 11 more against a real
 llama-server: Ask answered by a model, a Hugging Face download, and ghost text
 wired to the server. Each file's header has the commands.
 

@@ -51,6 +51,14 @@ check("tutor expectations loaded", vim.b.tutor_metadata and vim.b.tutor_metadata
 require("nvs.ask").answer("delete a line")
 check("ask window opens", vim.bo.filetype == "markdown" and vim.api.nvim_win_get_config(0).relative == "editor")
 check("ask window content", table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n"):find("dd") ~= nil)
+-- Markdown renders in the buffer and has a browser preview.
+vim.cmd("enew")
+vim.bo.filetype = "markdown"
+vim.api.nvim_buf_set_lines(0, 0, -1, false, { "# Title", "", "- [ ] task", "", "```lua", "print(1)", "```" })
+vim.wait(1500, function() return package.loaded["render-markdown"] ~= nil end, 50)
+check("markdown renderer loads", package.loaded["render-markdown"] ~= nil)
+check(":RenderMarkdown exists", vim.fn.exists(":RenderMarkdown") == 2)
+check("<leader>cp markdown preview", vim.fn.maparg(" cp", "n", false, true).desc ~= nil, vim.fn.maparg(" cp", "n", false, true).desc)
 local msgs = vim.api.nvim_exec2("messages", { output = true }).output
 check("no errors in :messages", not msgs:find("E%d+:") and not msgs:find("Error"), msgs:sub(1, 300))
 io.write(table.concat(out, "\n") .. "\n")
