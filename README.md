@@ -133,6 +133,10 @@ wired to the server. Each file's header has the commands.
 After editing `runtime/kb/ask.json`, the lessons or the icon, rebuild the
 mockup with `python scripts/build-preview.py`.
 
+## Security
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability privately.
+
 ## License
 
 MIT. See [LICENSE](LICENSE). LazyVim is Apache-2.0, Neovim is Apache-2.0 plus
