@@ -59,15 +59,40 @@ function M.setup()
     vim.cmd("Tutor nvs-ide")
   end, { desc = "nvs.ide: open the lessons" })
 
-  vim.api.nvim_create_user_command("NvsOllama", function(o)
-    require("nvs.ollama").command(o.args)
+  vim.api.nvim_create_user_command("NvsAI", function(o)
+    require("nvs.ai").command(o.args)
+  end, {
+    nargs = "*",
+    complete = function(lead, line)
+      if line:match("backend%s+") then
+        return { "llamacpp", "ollama", "openai" }
+      end
+      return vim.tbl_filter(function(c)
+        return c:find(lead, 1, true) == 1
+      end, { "on", "off", "status", "backend", "url", "port", "server", "stop" })
+    end,
+    desc = "nvs.ide: local AI settings",
+  })
+
+  vim.api.nvim_create_user_command("NvsModel", function(o)
+    require("nvs.ai").model_command(o.args)
   end, {
     nargs = "*",
     complete = function()
-      return { "on", "off", "status", "model", "url" }
+      return { "pull", "folder" }
     end,
-    desc = "nvs.ide: local AI (Ollama) settings",
+    desc = "nvs.ide: choose or download a local model",
   })
+
+  -- Start the built-in llama.cpp server the first time ghost text is likely to be needed.
+  if state.data.ai.enabled and state.data.ai.ghost_text then
+    vim.api.nvim_create_autocmd("InsertEnter", {
+      once = true,
+      callback = function()
+        require("nvs.ai").ensure()
+      end,
+    })
+  end
 
   vim.api.nvim_create_user_command("NvsWelcome", welcome, { desc = "nvs.ide: choose your stage again" })
 
@@ -77,7 +102,8 @@ function M.setup()
   end, { desc = "Ask how to… (nvs.ide)" })
   vim.keymap.set("n", "<leader>Nt", "<cmd>NvsTutor<cr>", { desc = "Tutor (nvs.ide)" })
   vim.keymap.set("n", "<leader>Ns", "<cmd>NvsStage<cr>", { desc = "Keybinding stage (nvs.ide)" })
-  vim.keymap.set("n", "<leader>No", "<cmd>NvsOllama status<cr>", { desc = "Local AI status (nvs.ide)" })
+  vim.keymap.set("n", "<leader>Na", "<cmd>NvsAI status<cr>", { desc = "Local AI status (nvs.ide)" })
+  vim.keymap.set("n", "<leader>Nm", "<cmd>NvsModel<cr>", { desc = "Choose a local model (nvs.ide)" })
   local ok, wk = pcall(require, "which-key")
   if ok then
     wk.add({ { "<leader>N", group = "nvs.ide" } })

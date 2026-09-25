@@ -1,14 +1,15 @@
 """Build docs/preview/index.html from docs/preview/src.html.
 
 The preview answers Ask questions and runs the lessons from the same files the
-editor uses (runtime/kb/ask.json, runtime/tutor/nvs-ide.tutor), so run this
-after changing either of them.
+editor uses (runtime/kb/ask.json, runtime/tutor/nvs-ide.tutor), and shows the
+icon from assets/nvs.ide.png, so run this after changing any of them.
 
     python scripts/build-preview.py [--fragment OUT]
 
 --fragment also writes the page without <!doctype>/<head>, for hosts that
 supply their own skeleton.
 """
+import base64
 import json
 import re
 import sys
@@ -36,14 +37,20 @@ def embed(value):
 def main():
     page = (ROOT / "docs/preview/src.html").read_text(encoding="utf-8")
     kb = json.loads((ROOT / "runtime/kb/ask.json").read_text(encoding="utf-8"))
-    for marker in ("/*@KB@*/null", "/*@TUTOR@*/null"):
+    for marker in ("/*@KB@*/null", "/*@TUTOR@*/null", "__NVS_ICON__"):
         if marker not in page:
             sys.exit(f"marker {marker} missing from src.html")
-    page = page.replace("/*@KB@*/null", embed(kb)).replace("/*@TUTOR@*/null", embed(tutor_data()))
+    icon = "data:image/png;base64," + base64.b64encode((ROOT / "assets/nvs.ide.png").read_bytes()).decode()
+    page = (
+        page.replace("/*@KB@*/null", embed(kb))
+        .replace("/*@TUTOR@*/null", embed(tutor_data()))
+        .replace("__NVS_ICON__", icon)
+    )
 
     full = (
         '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+        f'<link rel="icon" type="image/png" href="{icon}">\n'
         "</head>\n<body>\n" + page + "\n</body>\n</html>\n"
     )
     (ROOT / "docs/preview/index.html").write_text(full, encoding="utf-8")

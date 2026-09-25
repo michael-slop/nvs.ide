@@ -11,9 +11,33 @@
 
 .PARAMETER Terminal
   Start nvim in this terminal instead of Neovide.
+
+.PARAMETER Shortcut
+  Create an "nvs.ide" shortcut with the necronomicon icon (Start menu by default)
+  that runs this script, then exit.
+
+.PARAMETER ShortcutPath
+  Where to write the shortcut, when -Shortcut is given.
 #>
-param([switch]$Terminal)
+param(
+  [switch]$Terminal,
+  [switch]$Shortcut,
+  [string]$ShortcutPath = (Join-Path ([Environment]::GetFolderPath('Programs')) 'nvs.ide.lnk')
+)
 $ErrorActionPreference = 'Stop'
+
+if ($Shortcut) {
+  $shell = New-Object -ComObject WScript.Shell
+  $lnk = $shell.CreateShortcut($ShortcutPath)
+  $lnk.TargetPath = (Get-Command powershell.exe).Source
+  $lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+  $lnk.WorkingDirectory = [Environment]::GetFolderPath('UserProfile')
+  $lnk.IconLocation = (Resolve-Path (Join-Path $PSScriptRoot '..\assets\nvs.ide.ico')).Path + ',0'
+  $lnk.Description = 'nvs.ide: LazyVim with training wheels'
+  $lnk.Save()
+  Write-Host "Created $ShortcutPath"
+  return
+}
 
 $runtime = (Resolve-Path (Join-Path $PSScriptRoot '..\runtime')).Path
 $env:NVIM_APPNAME = 'nvs-ide'

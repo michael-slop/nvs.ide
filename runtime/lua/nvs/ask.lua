@@ -1,6 +1,6 @@
 -- Ask: type "how do I delete a line" and get the Vim way.
 -- Answers come from kb/ask.json, written by hand. When none match well and
--- local AI is on, the question goes to Ollama with the closest answers as context.
+-- local AI is on, the question goes to the local model with the closest answers as context.
 local state = require("nvs.state")
 
 local M = {}
@@ -167,7 +167,7 @@ local function show(title, lines, actions)
 end
 
 local function ask_model(question, context)
-  local o = require("nvs.ollama")
+  local ai = require("nvs.ai")
   local ref = {}
   for _, r in ipairs(context) do
     table.insert(ref, ("- %s: %s (Vim: %s)"):format(r.entry.q[1], r.entry.a, r.entry.keys))
@@ -180,8 +180,8 @@ local function ask_model(question, context)
     "Reference answers that may help:",
     table.concat(ref, "\n"),
   }, "\n")
-  vim.notify("Asking " .. state.data.ollama.chat_model .. "…", vim.log.levels.INFO, { title = "nvs.ide · Ask" })
-  o.chat({ { role = "system", content = system }, { role = "user", content = question } }, function(err, text)
+  vim.notify("Asking the local model…", vim.log.levels.INFO, { title = "nvs.ide · Ask" })
+  ai.chat({ { role = "system", content = system }, { role = "user", content = question } }, function(err, text, model)
     if err then
       return vim.notify(err, vim.log.levels.WARN, { title = "nvs.ide · Ask" })
     end
@@ -198,7 +198,7 @@ local function ask_model(question, context)
       actions.r = {
         "run a suggested command",
         function()
-          vim.ui.select(cmds, { prompt = "Run which command? (from " .. state.data.ollama.chat_model .. ")" }, function(c)
+          vim.ui.select(cmds, { prompt = "Run which command? (suggested by " .. model .. ")" }, function(c)
             if c then
               vim.cmd(c)
             end
@@ -207,7 +207,7 @@ local function ask_model(question, context)
       }
     end
     table.insert(lines, 1, "")
-    table.insert(lines, 1, "_Answer from " .. state.data.ollama.chat_model .. ", not from the written guide._")
+    table.insert(lines, 1, "_Answer from " .. model .. ", not from the written guide._")
     show("Ask: " .. question, lines, actions)
   end)
 end
@@ -216,7 +216,7 @@ function M.answer(question)
   local results = M.search(question, 4)
   local best = results[1]
   if not best or best.score < M.threshold then
-    if state.data.ollama.enabled then
+    if state.data.ai.enabled then
       return ask_model(question, results)
     end
     local lines = { "No written answer matches that well.", "" }
@@ -226,7 +226,7 @@ function M.answer(question)
         table.insert(lines, ("  %d. %s  `%s`"):format(i, r.entry.q[1], r.entry.keys))
       end
     end
-    vim.list_extend(lines, { "", "Turn on a local model with :NvsOllama on to get free-form answers." })
+    vim.list_extend(lines, { "", "Turn on a local model with :NvsAI on to get free-form answers." })
     local actions = {}
     for i, r in ipairs(results) do
       actions[tostring(i)] = { "open " .. i, function() M.show_entry(r.entry, question) end }
@@ -249,7 +249,7 @@ function M.show_entry(e, question, others)
       actions[tostring(i)] = { "open " .. i, function() M.show_entry(r.entry, question) end }
     end
   end
-  if state.data.ollama.enabled then
+  if state.data.ai.enabled then
     actions.o = { "ask the local model instead", function() ask_model(question, { { entry = e } }) end }
   end
   show("Ask: " .. (question or e.q[1]), lines, actions)

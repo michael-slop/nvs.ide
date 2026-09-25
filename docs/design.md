@@ -56,7 +56,7 @@ three times, once, or off. Silent at Stage 4.
   removed), then score each phrasing by IDF-weighted overlap in both
   directions. No network, no model.
 - Below the confidence threshold, if local AI is on, the question goes to
-  Ollama with the closest written answers as context. Any `:command` in the reply is
+  the local model with the closest written answers as context. Any `:command` in the reply is
   offered through a picker and runs only when chosen.
 - Opens with F1 (Stages 1 to 3), `Space ?` or `:NvsAsk <question>`.
 
@@ -70,11 +70,24 @@ lessons for VS Code users; exercise lines are checked against
 
 - blink.cmp (LazyVim's default) with documentation shown automatically and
   inline ghost text for the selected item.
-- minuet-ai.nvim for Copilot-style ghost text from a local Ollama model, loaded
-  only when `:NvsOllama on`. Alt+A accepts.
-- `lua/nvs/ollama.lua` talks to `http://localhost:11434` by default, with curl
-  through `vim.system`. A remote Ollama is reached by forwarding that port over
-  SSH, never by opening it on the network.
+- minuet-ai.nvim for Copilot-style ghost text from the local model, loaded
+  only when `:NvsAI on`. Alt+A accepts. On llama.cpp, nvs.ide builds the
+  fill-in-the-middle prompt for the model family (Qwen, DeepSeek, CodeLlama,
+  StarCoder, CodeGemma); Ollama applies its own template.
+- `lua/nvs/ai.lua` has three backends, all spoken to through the
+  OpenAI-compatible API with curl through `vim.system`:
+  - **llamacpp (default):** nvs.ide starts llama.cpp's `llama-server` in router
+    mode (`--models-dir`) on 127.0.0.1. Every GGUF in the models folder is listed
+    and loaded on first use, up to `models_max` at once. This gives Ollama's
+    "run any model" without Ollama. `:NvsModel pull owner/repo:quant` looks the
+    file up through the Hugging Face API, downloads it, and restarts the server,
+    because the router only scans the folder at start. The server starts lazily
+    and stops on `VimLeavePre`.
+  - **ollama:** an Ollama server, default `http://localhost:11434`.
+  - **openai:** any other OpenAI-compatible server (LM Studio, vLLM, llamafile),
+    with an optional API key read from an environment variable.
+- A model on another machine is reached by forwarding its port over SSH, never
+  by opening it on the network.
 
 ## The native window (Phase 1 onward)
 
@@ -126,3 +139,8 @@ rather than emoji.
 3. Settings and Plugins screens
 4. Extension host
 5. Packaging, Windows first
+
+## License
+
+MIT (see LICENSE). nvs.ide is a community tool: forks, extra Ask answers and
+new lessons are welcome.

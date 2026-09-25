@@ -12,7 +12,7 @@ local function check(name, ok, detail) table.insert(out, (ok and "PASS " or "FAI
 vim.api.nvim_exec_autocmds("User", { pattern = "VeryLazy" })
 vim.wait(500)
 check("colorscheme", vim.g.colors_name == "necronomicon", vim.g.colors_name)
-for _, c in ipairs({ "NvsStage", "NvsAsk", "NvsTutor", "NvsOllama", "NvsWelcome" }) do
+for _, c in ipairs({ "NvsStage", "NvsAsk", "NvsTutor", "NvsAI", "NvsModel", "NvsWelcome" }) do
   check("command :" .. c, vim.fn.exists(":" .. c) == 2)
 end
 local function rhs(mode, lhs) local m = vim.fn.maparg(lhs, mode, false, true); return m and m.desc or "" end
@@ -32,6 +32,17 @@ require("nvs.stages").set(2)
 check("stage 2 restores LazyVim i_<Esc>", not rhs("i", "<Esc>"):find("Stage 1"), rhs("i", "<Esc>"))
 local saved = vim.fn.json_decode(vim.fn.readfile(vim.fn.stdpath("data") .. "/nvs-ide.json"))
 check("state saved to disk", saved.stage == 2)
+-- Settings saved before the llama.cpp backend existed move over to the Ollama backend.
+local st = require("nvs.state")
+local file = vim.fn.stdpath("data") .. "/nvs-ide.json"
+local keep = vim.fn.readfile(file)
+vim.fn.writefile({ vim.json.encode({ stage = 2, ollama = { enabled = true, url = "http://box:11434", chat_model = "m1" } }) }, file)
+st.load()
+check("old Ollama settings migrate", st.data.ai.backend == "ollama" and st.data.ai.enabled and st.data.ai.ollama.url == "http://box:11434" and st.data.ai.chat_model == "m1")
+vim.fn.writefile(keep, file)
+st.load()
+check("built-in llama.cpp is the default backend", st.defaults.ai.backend == "llamacpp")
+check("ask: local AI question", require("nvs.ask").search("use ollama", 1)[1].entry.id == "local-ai")
 local r = require("nvs.ask").search("delete a line", 1)[1]
 check("ask: delete a line", r and r.entry.id == "delete-line")
 vim.cmd("NvsTutor")

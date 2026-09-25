@@ -65,11 +65,10 @@
   "intellisense": "completion",
   "suggestions": "completion",
   "suggest": "completion",
-  "ai": "ollama",
-  "llm": "ollama",
-  "model": "ollama",
-  "chatbot": "ollama",
-  "copilot": "ollama",
+  "ai": "localai",
+  "llm": "localai",
+  "chatbot": "localai",
+  "copilot": "localai",
   "lines": "line",
   "words": "word",
   "characters": "character",
@@ -82,7 +81,12 @@
   "pane": "window",
   "split": "window",
   "splits": "window",
-  "windows": "window"
+  "windows": "window",
+  "ollama": "localai",
+  "gguf": "model",
+  "models": "model",
+  "llama": "localai",
+  "huggingface": "download"
  },
  "entries": [
   {
@@ -970,7 +974,7 @@
     "intellisense",
     "code completion"
    ],
-   "a": "Suggestions appear as you type. Ctrl+N and Ctrl+P (or the arrow keys) move through them, Enter accepts, and Ctrl+Space opens the menu by hand. If a local model is on, grey ghost text shows a longer suggestion; Alt+A accepts it.",
+   "a": "Suggestions appear as you type. Ctrl+N and Ctrl+P (or the arrow keys) move through them, Enter accepts, and Ctrl+Space opens the menu by hand. If local AI is on, grey ghost text shows a longer suggestion; Alt+A accepts it.",
    "keys": "Enter, Ctrl+N/P, Ctrl+Space",
    "vscode": "Tab / Enter"
   },
@@ -1088,19 +1092,22 @@
    "vscode": "Ctrl+K Ctrl+T"
   },
   {
-   "id": "ollama",
+   "id": "local-ai",
    "cat": "nvs.ide",
    "q": [
-    "use ollama",
-    "local model",
+    "use a local model",
+    "local ai",
     "ai assistant",
     "ask the ai",
     "ai completion",
-    "chatbot"
+    "use ollama",
+    "chatbot",
+    "copilot alternative"
    ],
-   "a": "Turn it on with :NvsOllama on (or Settings > Local AI). nvs.ide talks to Ollama at http://localhost:11434. The Ask window uses it when none of its written answers match, and ghost-text completion uses it for longer suggestions. If Ollama runs on another machine, forward port 11434 over SSH and keep the default address.",
-   "keys": ":NvsOllama on",
-   "vscode": "(Copilot)"
+   "a": "Turn it on with :NvsAI on. By default nvs.ide runs llama.cpp itself, so any GGUF model works and nothing else is needed. Ollama or an OpenAI-compatible server like LM Studio also work (:NvsAI backend ollama). Ask uses the model when no written answer matches, and ghost-text completion uses it for longer suggestions. Everything stays on 127.0.0.1.",
+   "keys": ":NvsAI on",
+   "vscode": "(Copilot)",
+   "try": "NvsAI status"
   },
   {
    "id": "ask",
@@ -1114,6 +1121,23 @@
    "a": "Space ? (or F1 at Stages 1 to 3) opens Ask. Type a question in plain words, like 'delete a line' or 'split the screen'.",
    "keys": "<leader>?",
    "vscode": "(search the web)"
+  },
+  {
+   "id": "download-model",
+   "cat": "nvs.ide",
+   "q": [
+    "download a model",
+    "add a model",
+    "get a model from hugging face",
+    "switch model",
+    "change the model",
+    "gguf model",
+    "mount a model"
+   ],
+   "a": ":NvsModel pull followed by a Hugging Face repo and quantisation downloads it into the models folder, for example :NvsModel pull Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:Q4_K_M. :NvsModel on its own lists your models and picks which one Ask and completion use. You can also drop .gguf files into the folder that :NvsModel folder opens.",
+   "keys": ":NvsModel",
+   "vscode": "(no equivalent)",
+   "try": "NvsModel"
   }
  ]
 }
