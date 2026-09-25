@@ -1,10 +1,15 @@
 -- nvs.ide transition layer: commands, keymaps and the first-run welcome.
 local state = require("nvs.state")
 local stages = require("nvs.stages")
+local coach = require("nvs.coach")
 
 local M = {}
 
 local function welcome()
+  -- Inside the nvs.ide window the Welcome screen is native; the window draws it.
+  if vim.g.nvs_shell and require("nvs.bridge").open("welcome") then
+    return
+  end
   local choices = {
     { label = "I'm coming from VS Code", stage = 1 },
     { label = "I know a little Vim", stage = 2 },
@@ -29,6 +34,11 @@ end
 function M.setup()
   state.load()
   stages.apply(state.data.stage)
+
+  -- Inside the nvs.ide shell, stream workbench state to it.
+  if vim.g.nvs_shell then
+    require("nvs.bridge").setup()
+  end
 
   vim.api.nvim_create_user_command("NvsStage", function(o)
     if o.args == "" then
@@ -84,6 +94,22 @@ function M.setup()
     desc = "nvs.ide: choose or download a local model",
   })
 
+  vim.api.nvim_create_user_command("NvsCoach", function(o)
+    coach.command(o.args)
+  end, {
+    nargs = "*",
+    complete = function(lead, line)
+      local words = vim.list_extend(vim.deepcopy(coach.frequencies), { "ghost" })
+      if line:match("ghost%s+") then
+        words = { "on", "off" }
+      end
+      return vim.tbl_filter(function(c)
+        return c:find(lead, 1, true) == 1
+      end, words)
+    end,
+    desc = "nvs.ide: coach hints (always|three|once|off) and ghost text (ghost on|off)",
+  })
+
   -- Start the built-in llama.cpp server the first time ghost text is likely to be needed.
   if state.data.ai.enabled and state.data.ai.ghost_text then
     vim.api.nvim_create_autocmd("InsertEnter", {
@@ -95,6 +121,21 @@ function M.setup()
   end
 
   vim.api.nvim_create_user_command("NvsWelcome", welcome, { desc = "nvs.ide: choose your stage again" })
+
+  -- The Settings screen lives in the window. In a terminal, say where the values are.
+  vim.api.nvim_create_user_command("NvsSettings", function()
+    if vim.g.nvs_shell and require("nvs.bridge").open("settings") then
+      return
+    end
+    local prefs = require("nvs.prefs")
+    vim.notify(
+      ("The Settings screen is part of the nvs.ide window. Values are in %s; the generated file is %s."):format(
+        vim.fn.stdpath("data") .. "/nvs-settings.json", prefs.settings_file()),
+      vim.log.levels.INFO, { title = "nvs.ide" })
+    if vim.fn.filereadable(prefs.settings_file()) == 1 then
+      vim.cmd.edit(vim.fn.fnameescape(prefs.settings_file()))
+    end
+  end, { desc = "nvs.ide: the Settings screen (in the window)" })
 
   -- Replaces LazyVim's buffer-keymaps popup on <leader>?; <leader>sk still searches every keymap.
   vim.keymap.set("n", "<leader>?", function()

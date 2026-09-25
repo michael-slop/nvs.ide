@@ -209,7 +209,8 @@
     "show sidebar",
     "file tree",
     "toggle explorer",
-    "see my files"
+    "see my files",
+    "open the explorer"
    ],
    "a": "Space e toggles the file explorer. Inside it, j and k move, l or Enter opens, h closes a folder, a creates a file, d deletes and r renames.",
    "keys": "<leader>e",
@@ -772,7 +773,8 @@
     "side by side",
     "open two files",
     "split vertically",
-    "split horizontally"
+    "split horizontally",
+    "close a split"
    ],
    "a": "Space | splits the window side by side and Space - splits it top and bottom. Space w d closes the current split.",
    "keys": "<leader>| / <leader>-",
@@ -798,7 +800,7 @@
    "q": [
     "open terminal",
     "toggle terminal",
-    "run a command",
+    "run a shell command",
     "integrated terminal"
    ],
    "a": "Space f t opens a terminal. Inside it you're typing into the shell; press Ctrl+\\ then Ctrl+N to get back to Normal mode so you can scroll and copy.",

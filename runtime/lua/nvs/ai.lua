@@ -88,6 +88,10 @@ function M.server_path()
   return path ~= "" and path or nil
 end
 
+local function log_path()
+  return vim.fn.stdpath("log") .. "/nvs-llama-server.log"
+end
+
 local function flush(err)
   local q = waiting
   waiting = {}
@@ -96,17 +100,30 @@ local function flush(err)
   end
 end
 
-local function wait_healthy(deadline)
+-- Poll /health until `obj` (the server this poll belongs to) answers, or the deadline.
+local function wait_healthy(obj, deadline)
   vim.system({ "curl", "-s", "-m", "1", M.base_url() .. "/health" }, { text = true }, vim.schedule_wrap(function(res)
+    if server ~= obj then
+      -- This server is gone. A stop flushed its waiters itself; one that died on its
+      -- own left them queued, so they hear about it here. A newer server that has
+      -- replaced it polls for itself.
+      if not server then
+        flush("llama-server didn't start. Its log is at " .. log_path())
+      end
+      return
+    end
     if res.code == 0 and res.stdout:find('"ok"') then
       ready = true
       return flush(nil)
     end
-    if not server or vim.uv.now() > deadline then
-      return flush("llama-server didn't start. Its log is at " .. vim.fn.stdpath("log") .. "/nvs-llama-server.log")
+    if vim.uv.now() > deadline then
+      -- Still running but never healthy: end it, so the next request starts afresh
+      -- instead of queueing behind a server that will not answer.
+      flush("llama-server didn't start. Its log is at " .. log_path())
+      return M.stop()
     end
     vim.defer_fn(function()
-      wait_healthy(deadline)
+      wait_healthy(obj, deadline)
     end, 300)
   end))
 end
@@ -135,7 +152,7 @@ function M.ensure(cb)
     "--host", "127.0.0.1", "--port", tostring(l.port), "--no-webui", "-ngl", tostring(l.gpu_layers),
   }
   vim.list_extend(args, l.extra_args or {})
-  local log = assert(io.open(vim.fn.stdpath("log") .. "/nvs-llama-server.log", "w"))
+  local log = assert(io.open(log_path(), "w"))
   local function sink(_, data)
     if data then
       log:write(data)
@@ -143,30 +160,85 @@ function M.ensure(cb)
     end
   end
   ready = false
-  server = vim.system(args, { stdout = sink, stderr = sink }, function()
-    server, ready = nil, false
+  -- The exit callback compares against this local, not the module's `server`: by the
+  -- time an old server's exit lands, a port change or a restart may have started a new
+  -- one, and clearing that handle would make the next request spawn a duplicate.
+  local obj
+  obj = vim.system(args, { stdout = sink, stderr = sink }, function()
+    if server == obj then
+      server, ready = nil, false
+    end
     pcall(log.close, log)
   end)
-  wait_healthy(vim.uv.now() + 60000)
+  server = obj
+  wait_healthy(obj, vim.uv.now() + 60000)
 end
 
-function M.stop()
-  if server then
-    server:kill(15)
-    server, ready = nil, false
+-- Kill a managed server and every process it spawned. In router mode llama-server
+-- forks one child per loaded model; killing only the router can leave that child
+-- running, with the model still in VRAM. Returns the kill command's SystemObj so a
+-- caller can wait on it.
+local function kill_tree(obj)
+  local pid = tostring(obj.pid)
+  if vim.fn.has("win32") == 1 then
+    -- /T takes the children with it; /F because a server without a console has no
+    -- close message to receive.
+    return vim.system({ "taskkill", "/T", "/F", "/PID", pid }, { text = true })
   end
+  -- Children first: once the router is gone they are re-parented and pkill -P would
+  -- no longer find them.
+  return vim.system({ "pkill", "-TERM", "-P", pid }, { text = true }, function()
+    if not obj:is_closing() then
+      pcall(obj.kill, obj, 15)
+    end
+  end)
+end
+
+-- Stop the managed server and its process tree. cb() runs once the server's process
+-- has gone, so a caller can start another on the same port. Returns the kill command's
+-- SystemObj, or nil when nothing was running.
+function M.stop(cb)
+  local obj = server
+  server, ready = nil, false
+  if not obj then
+    if cb then
+      cb()
+    end
+    return nil
+  end
+  flush("llama-server was stopped.") -- anything still waiting for it to come up
+  local kill = kill_tree(obj)
+  if cb then
+    -- The kill command returns before the parent's exit has landed, so watch the
+    -- handle instead. Give up after 10 s rather than leave the caller waiting.
+    local deadline = vim.uv.now() + 10000
+    local function poll()
+      if obj:is_closing() or vim.uv.now() > deadline then
+        return cb()
+      end
+      vim.defer_fn(poll, 100)
+    end
+    poll()
+  end
+  return kill
 end
 
 function M.restart(cb)
-  M.stop()
-  vim.defer_fn(function()
+  M.stop(function()
     M.ensure(cb)
-  end, 500)
+  end)
 end
 
 vim.api.nvim_create_autocmd("VimLeavePre", {
   group = vim.api.nvim_create_augroup("nvs_ai", { clear = true }),
-  callback = M.stop,
+  callback = function()
+    -- Block until the kill has landed: Neovim exiting must not race it, or the model
+    -- process outlives the editor.
+    local kill = M.stop()
+    if kill then
+      kill:wait(5000)
+    end
+  end,
 })
 
 ---------------------------------------------------------------------------
@@ -249,6 +321,64 @@ function M.resolve(spec, cb)
   end))
 end
 
+-- Move a finished download into place. On Windows os.rename cannot land on a name that
+-- exists, and a file another program holds open can be neither renamed nor removed, so
+-- the old copy steps aside instead of being deleted first: if the new one then cannot
+-- be moved in, the old one comes back and nothing is lost. (A loaded model is not such
+-- a hold: llama-server shares its file, so it can be replaced while it runs.)
+-- Returns nil, or the error to show; on success a second value may carry a warning.
+function M.install(part, dest)
+  local function reason(err)
+    -- Lua prefixes the file name; the messages name it already.
+    return err:match("^.*: (.-)$") or err
+  end
+  -- A rename that fails while its source is still there is retried for a moment:
+  -- Defender and indexers hold a fresh file briefly (cargo and rustup retry here for
+  -- the same reason). The wait blocks, at most 1.25 s and only when a rename failed.
+  -- A missing source is not worth waiting for.
+  local function rename(from, to)
+    local ok, err
+    for attempt = 1, 6 do
+      ok, err = os.rename(from, to)
+      if ok or attempt == 6 or not vim.uv.fs_stat(from) then
+        break
+      end
+      vim.uv.sleep(250)
+    end
+    return ok, err
+  end
+  local old = dest .. ".old"
+  local replacing = vim.uv.fs_stat(dest) ~= nil
+  if replacing then
+    if vim.uv.fs_stat(old) then
+      -- Left by an earlier attempt; the rename below cannot land on it.
+      local ok, err = os.remove(old)
+      if not ok then
+        return ("Couldn't remove the leftover %s: %s."):format(old, reason(err))
+      end
+    end
+    local ok, err = rename(dest, old)
+    if not ok then
+      return ("Couldn't replace %s: %s (something still has it open)."):format(dest, reason(err))
+    end
+  end
+  local ok, err = rename(part, dest)
+  if not ok then
+    local msg = ("Couldn't move %s into place as %s: %s."):format(part, dest, reason(err))
+    if replacing and not rename(old, dest) then
+      msg = msg .. (" The old copy is at %s."):format(old)
+    end
+    return msg
+  end
+  if replacing then
+    local removed, rerr = os.remove(old)
+    if not removed then
+      return nil, ("The old copy %s couldn't be removed: %s. The next pull of this model clears it."):format(old, reason(rerr))
+    end
+  end
+  return nil
+end
+
 -- Download a model into the models folder, then restart the server so it shows up.
 function M.pull(spec, cb)
   cb = cb or function() end
@@ -270,7 +400,14 @@ function M.pull(spec, cb)
       if not p then
         notify("Model ready: " .. parts[1].file:gsub("%.gguf$", ""))
         if server then
-          M.restart(function() cb(nil, parts[1].file) end)
+          -- The router lists its folder at startup only. The model is on disk either
+          -- way, so a restart that fails is reported, not returned.
+          M.restart(function(err)
+            if err then
+              notify(err, vim.log.levels.WARN)
+            end
+            cb(nil, parts[1].file)
+          end)
         else
           cb(nil, parts[1].file)
         end
@@ -284,7 +421,20 @@ function M.pull(spec, cb)
           notify(e, vim.log.levels.WARN)
           return cb(e)
         end
-        os.rename(dest .. ".part", dest)
+        local e, note = M.install(dest .. ".part", dest)
+        if e then
+          -- The old model stays. The download is dropped, so the next pull fetches it
+          -- again; one that is held open cannot be dropped, so the message says where
+          -- it is (a later pull of the same model overwrites it).
+          if not os.remove(dest .. ".part") and vim.uv.fs_stat(dest .. ".part") then
+            e = e .. (" The download is still at %s."):format(dest .. ".part")
+          end
+          notify(e, vim.log.levels.WARN)
+          return cb(e)
+        end
+        if note then
+          notify(note, vim.log.levels.WARN)
+        end
         next_part()
       end))
     end
@@ -353,6 +503,21 @@ function M.status()
   if c.backend == "llamacpp" then
     table.insert(lines, ("llama-server: %s   Models folder: %s"):format(M.server_path() or "not found", M.models_dir()))
   end
+  if not c.enabled then
+    -- Off means off: nothing starts and nothing is contacted. Report from the
+    -- settings and the disk, and say what :NvsAI on would use.
+    if c.backend == "llamacpp" then
+      table.insert(lines, server and ("llama-server is running (pid %d); :NvsAI stop ends it."):format(server.pid)
+        or "llama-server is not running. :NvsAI on lets Ask and ghost text start it.")
+      local files = vim.tbl_map(function(f)
+        return (vim.fs.basename(f):gsub("%.gguf$", ""))
+      end, vim.fn.glob(M.models_dir() .. "/*.gguf", false, true))
+      table.insert(lines, "Models on disk: " .. (#files > 0 and table.concat(files, ", ") or "none yet (:NvsModel pull <repo:quant>)"))
+    else
+      table.insert(lines, "Off: nothing is asked of " .. M.base_url() .. " until :NvsAI on.")
+    end
+    return notify(table.concat(lines, "\n"))
+  end
   M.models(function(err, list)
     if err then
       table.insert(lines, err)
@@ -395,8 +560,7 @@ function M.command(args)
     M.stop()
     notify("llama-server: " .. (M.server_path() or (rest .. " (not found)")))
   elseif sub == "stop" then
-    M.stop()
-    notify("llama-server stopped")
+    notify(M.stop() and "llama-server stopped" or "llama-server wasn't running")
   else
     M.status()
   end

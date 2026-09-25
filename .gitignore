@@ -1,6 +1,8 @@
 # Written by lazy.nvim when the runtime is used as a config folder
 runtime/lazy-lock.json
 runtime/lazyvim.json
+# Written by the Settings screen (lua/nvs/prefs.lua)
+runtime/lua/nvs/settings.lua
 
 # Rust shell (Phase 1)
 shell/target/
