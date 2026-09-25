@@ -1,0 +1,52 @@
+[package]
+name = "nvs-ide"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "nvs.ide: the native window around Neovim (LazyVim with training wheels)"
+repository = "https://github.com/michael-slop/nvs.ide"
+build = "build.rs"
+
+[lib]
+name = "nvs_shell"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nvs-ide"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+log = "0.4"
+env_logger = "0.11"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+futures = "0.3"
+nvim-rs = { version = "0.9.2", features = ["use_tokio"] }
+rmpv = { version = "1.3", features = ["with-serde"] }
+async-trait = "0.1"
+winit = "=0.30.13"
+wgpu = "30.0.1"
+bytemuck = { version = "1", features = ["derive"] }
+swash = "0.2"
+fontdb = "0.23"
+etagere = "0.3"
+lru = "0.16"
+parking_lot = "0.12"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+arboard = "3"
+image = { version = "0.25", default-features = false, features = ["png"] }
+walkdir = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_System_Console", "Win32_Foundation"] }
+
+[build-dependencies]
+winres = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = true

@@ -1,0 +1,6 @@
+# The shell builds with the GNU toolchain: neither of Michael's machines has MSVC, and
+# every dependency here (wgpu, winit, swash) links fine with WinLibs mingw64 on PATH.
+# MSVC works too if you have it; this pin just makes `cargo build` do the right thing
+# on a machine whose default toolchain has no linker.
+[toolchain]
+channel = "stable-x86_64-pc-windows-gnu"

@@ -1,11 +1,14 @@
 <#
 .SYNOPSIS
-  Run the nvs.ide runtime (LazyVim + the nvs.ide layer) next to your own Neovim config.
+  Run the nvs.ide runtime (LazyVim + the nvs.ide layer) WITHOUT the nvs.ide window.
 
 .DESCRIPTION
   Links this repo's runtime/ folder as the Neovim app "nvs-ide" (NVIM_APPNAME), then
   starts Neovide with it. Your normal nvim config, plugins and data are not touched:
   nvs-ide gets its own config, data and state folders.
+
+  The nvs.ide window (shell\target\release\nvs-ide.exe, built with cargo) does the same
+  link on its own first start; use it instead when you want the workbench.
 
   The first start downloads LazyVim and its plugins, which takes a minute.
 
@@ -29,10 +32,18 @@ $ErrorActionPreference = 'Stop'
 if ($Shortcut) {
   $shell = New-Object -ComObject WScript.Shell
   $lnk = $shell.CreateShortcut($ShortcutPath)
-  $lnk.TargetPath = (Get-Command powershell.exe).Source
-  $lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+  $exe = Join-Path $PSScriptRoot '..\shell\target\release\nvs-ide.exe'
+  if (Test-Path $exe) {
+    # The window, once it has been built (cd shell; cargo build --release).
+    $lnk.TargetPath = (Resolve-Path $exe).Path
+    $lnk.Arguments = ''
+    $lnk.IconLocation = (Resolve-Path $exe).Path + ',0'
+  } else {
+    $lnk.TargetPath = (Get-Command powershell.exe).Source
+    $lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    $lnk.IconLocation = (Resolve-Path (Join-Path $PSScriptRoot '..\assets\nvs.ide.ico')).Path + ',0'
+  }
   $lnk.WorkingDirectory = [Environment]::GetFolderPath('UserProfile')
-  $lnk.IconLocation = (Resolve-Path (Join-Path $PSScriptRoot '..\assets\nvs.ide.ico')).Path + ',0'
   $lnk.Description = 'nvs.ide: LazyVim with training wheels'
   $lnk.Save()
   Write-Host "Created $ShortcutPath"

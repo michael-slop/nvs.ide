@@ -29,41 +29,67 @@ time:
   for Copilot-style suggestions. Ollama and OpenAI-compatible servers (LM
   Studio, vLLM, llamafile) work too. Nothing leaves your machine.
 
-The plan is a native window around Neovim (a Neovide fork) with VS Code's
-workbench: explorer, settings screen, plugin browser and panels.
-[docs/preview/index.html](docs/preview/index.html) is an interactive mockup of
-it, and [docs/design.md](docs/design.md) is the design.
+Around it is **the window**: a native Rust shell (`shell/`) that draws VS Code's
+workbench around Neovim's grid: activity bar, explorer, search, source control,
+tabs, a bottom panel with problems and output, a status bar, a command palette
+(`Ctrl+Shift+P`), and native Settings, Plugins, Learn and Welcome screens.
+Neovim draws the text; the shell draws everything else, in the same pixel font.
+[docs/preview/index.html](docs/preview/index.html) is the interactive mockup it
+was built from, and [docs/design.md](docs/design.md) is the design.
 
 ## Status
 
 | Part | State |
 |---|---|
-| `runtime/`: LazyVim + stages, coach, Ask, lessons, local AI | Works today in Neovide or a terminal |
-| `docs/preview/`: interactive design mockup | Done |
-| `shell/`: native window (Neovide fork) | Phase 1, not started |
-| Settings and Plugins screens | In the mockup only |
-| Open VSX extension host | Later phase |
+| `runtime/`: LazyVim + stages, coach, Ask, lessons, local AI | Works in the window, in Neovide, or in a terminal |
+| `shell/`: the native window (Rust, wgpu, own renderer) | Works: workbench, palette, Settings, Plugins, Learn, Welcome |
+| Settings screen | 56 settings in 12 categories, writes `lua/nvs/settings.lua`, imports VS Code's `settings.json` and `keybindings.json` |
+| Plugins screen | lazy.nvim's list and LazyVim's extras, with enable/disable and update |
+| Debugger view, workspace-scoped settings | Not built; `Space d` works once the dap.core extra is on |
+| Open VSX extension host | Not built |
 
-## Try the runtime
+## Run it
 
-It runs as a separate Neovim app (`NVIM_APPNAME=nvs-ide`), so your own config,
-plugins and data are left alone.
+Everything runs as a separate Neovim app (`NVIM_APPNAME=nvs-ide`), so your own
+config, plugins and data are left alone.
 
 ```powershell
 git clone https://github.com/michael-slop/nvs.ide
-cd nvs.ide
-.\scripts\try.ps1            # Neovide
-.\scripts\try.ps1 -Terminal  # nvim in this terminal
-.\scripts\try.ps1 -Shortcut  # add an nvs.ide shortcut, with its icon, to the Start menu
+cd nvs.ide\shell
+cargo build --release        # the window: shell\target\release\nvs-ide.exe
+.\target\release\nvs-ide.exe # or double-click it; nvs-ide --help lists the options
 ```
 
-The first start installs LazyVim and its plugins, then asks where you're coming
-from and picks a stage.
+The first start links the app's config folder to `runtime/`, installs LazyVim
+and its plugins (a minute), and shows the Welcome screen to pick a stage.
 
-**Needs:** Neovim 0.11 or newer, git, a C compiler, curl, and the
-`tree-sitter` CLI for LazyVim's syntax parsers. ripgrep, fd and lazygit are
-recommended. On Windows, run `git config --global core.longpaths true` if a
-plugin fails to clone.
+Without the window:
+
+```powershell
+.\scripts\try.ps1            # Neovide
+.\scripts\try.ps1 -Terminal  # nvim in this terminal
+```
+
+**Needs:** Neovim 0.11 or newer (0.12 tested), git, a C compiler, curl, and the
+`tree-sitter` CLI for LazyVim's syntax parsers; ripgrep for the Search view.
+fd and lazygit are recommended. To build the window: Rust stable (the GNU
+toolchain works on Windows; no MSVC needed) and a Vulkan, DirectX 12 or OpenGL
+driver. On Windows, run `git config --global core.longpaths true` if a plugin
+fails to clone.
+
+### The window
+
+| Key | Does |
+|---|---|
+| `Ctrl+Shift+P` | Command palette: commands, `:` Ex commands, `@` files, `/` search the file |
+| `Ctrl+B`, `Ctrl+\`` | Toggle the sidebar (stages 1 to 3) and the bottom panel |
+| `Ctrl+Shift+E` `F` `G` `M` | Explorer, Search, Source control, Problems, with the keyboard |
+| `Ctrl+,` `Ctrl+Shift+X` | Settings, Plugins |
+| `j` `k` `Enter` `h` `l` `/` `Esc` | Every list and screen moves like Vim; Esc goes back to the editor |
+
+Every setting on the Settings screen shows the Lua or command it maps to, and
+`Import from VS Code` reads your `settings.json` and `keybindings.json` and says
+what it could and could not carry over.
 
 ### Commands
 
@@ -78,6 +104,8 @@ plugin fails to clone.
 | `:NvsModel pull <repo>[:quant]` | Download a GGUF from Hugging Face |
 | `:NvsModel folder` | Open the models folder |
 | `:NvsWelcome` | Choose your starting stage again |
+| `:NvsCoach always\|three\|once\|off`, `:NvsCoach ghost on\|off` | How often hints repeat; ghost text on or off |
+| `:NvsSettings` | The Settings screen in the window; in a terminal, the generated `settings.lua` |
 
 ### Local AI
 
@@ -110,25 +138,42 @@ SSH and keep the local address.
 ```
 runtime/                LazyVim config + the nvs.ide layer (the Neovim half)
   lua/config/           LazyVim bootstrap, options, keymaps
-  lua/nvs/              stages, coach, ask, ai (llama.cpp / Ollama / OpenAI), state
-  lua/plugins/nvs.lua   plugins nvs.ide adds (minuet, blink.cmp tweaks)
+  lua/nvs/              stages, coach, ask, ai (llama.cpp / Ollama / OpenAI), state,
+                        prefs (the settings schema), plugins (the Plugins screen's data),
+                        bridge (streams state to the window)
+  lua/plugins/nvs.lua   plugins nvs.ide adds and the settings that reach plugin options
   kb/ask.json           Ask's written answers, shared with the preview
   tutor/                :NvsTutor lessons
   colors/               necronomicon colour scheme
+shell/                  the window (Rust)
+  src/bridge/           nvim --embed, msgpack-RPC, the UI protocol (ported from Neovide)
+  src/editor/           grids, windows, styles, cursor
+  src/renderer/         wgpu, glyph atlas, pixel icons, one quad pipeline for text and chrome
+  src/ui/               cell-based widgets: lists, fields, tabs, buttons, bevels
+  src/workbench/        activity bar, sidebar views, palette, panel, status bar, screens
+  tests/attach.rs       headless end-to-end: attach, type, quit
 assets/                 the icon (png, and a multi-size ico for Windows)
 docs/design.md          the design
 docs/preview/           interactive mockup (build with scripts/build-preview.py)
 tests/                  headless checks for the runtime
-scripts/try.ps1         run the runtime next to your own config
+scripts/try.ps1         run the runtime next to your own config, without the window
 ```
 
 ## Tests
 
-`tests/verify.lua` runs 31 headless checks against a sandboxed install: commands,
-stage keymaps (and restoring LazyVim's own at Stage 4), saved state and its
-migration, the lessons, Ask, and the Markdown renderer. `tests/ai_live.lua` runs 11 more against a real
-llama-server: Ask answered by a model, a Hugging Face download, and ghost text
-wired to the server. Each file's header has the commands.
+```powershell
+.\tests\run.ps1                      # the runtime, in a sandbox: verify.lua + verify_ui.lua
+cd shell; cargo test                 # the window: unit tests and the attach test
+```
+
+`tests/verify.lua` checks startup: commands, stage keymaps (and restoring
+LazyVim's own at Stage 4), saved state and its migration, the lessons, Ask, and
+the Markdown renderer. `tests/verify_ui.lua` runs inside Neovim's main loop and
+types like a person: Insert-mode behaviour at each stage, Ask's window, the
+explorer and search keys, the tutor, settings validation, Ask's answers and the
+theme. `tests/ai_live.lua` runs against a real llama-server: Ask answered by a
+model, a Hugging Face download, ghost text, and stopping the server's process
+tree. Each file's header has the commands.
 
 After editing `runtime/kb/ask.json`, the lessons or the icon, rebuild the
 mockup with `python scripts/build-preview.py`.
@@ -140,4 +185,6 @@ See [SECURITY.md](SECURITY.md) to report a vulnerability privately.
 ## License
 
 MIT. See [LICENSE](LICENSE). LazyVim is Apache-2.0, Neovim is Apache-2.0 plus
-the Vim license, llama.cpp and Neovide are MIT.
+the Vim license, llama.cpp is MIT. The window's Neovim bridge, keyboard and
+mouse handling are ported from [Neovide](https://github.com/neovide/neovide)
+(MIT, `shell/LICENSE-NEOVIDE`).

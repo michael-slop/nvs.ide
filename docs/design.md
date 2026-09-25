@@ -15,7 +15,7 @@ point it at the Open VSX registry. So each project does a different job:
 |---|---|
 | neovim/neovim | The whole editing engine, unforked, embedded over its msgpack-RPC UI protocol |
 | LazyVim/LazyVim | The plugin set and defaults: finder, explorer, completion, LSP, git, formatting |
-| neovide/neovide | The starting point for the native window (Phase 1) |
+| neovide/neovide | The Neovim bridge, keyboard and mouse handling and grid model, ported into the window (MIT) |
 | vscodium/vscodium | The Open VSX registry, the no-telemetry policy and the licensing approach |
 
 Most "VS Code features" are external servers speaking open protocols: language
@@ -93,37 +93,57 @@ lessons for VS Code users; exercise lines are checked against
 
 ```
 +--------------------------------------------------------------+
-|  nvs.ide shell  (Rust, Neovide fork, GPU-rendered)           |
-|  workbench chrome, Settings, Plugins, Ask, coach             |
+|  nvs.ide shell  (Rust: winit + wgpu + swash, own renderer)   |
+|  workbench chrome, palette, Settings, Plugins, Learn, Welcome|
 +-----------+-----------------------------+--------------------+
             | msgpack-RPC (stdio)         | JSON-RPC (on demand)
 +-----------v-----------+      +----------v---------------------+
 |  nvim --embed          |<---->|  extension host (Node, optional)|
 |  runtime/ (LazyVim +   |      |  subset of the vscode API,      |
-|  nvs layer + bridge)   |      |  Open VSX extensions            |
+|  nvs layer + bridge)   |      |  Open VSX extensions (not built)|
 +------------------------+      +--------------------------------+
 ```
 
-- The shell renders Neovim's grids (`ext_multigrid`) and replaces the
-  cmdline, popup menu and messages with native widgets.
-- `lua/nvs/bridge.lua` streams diagnostics, symbols, tabs, debug state and
-  option changes to the shell with `rpcnotify`. Shell actions go back as
-  Neovim commands, so everything stays scriptable.
-- **Settings screen:** 15 categories and 74 settings, searchable by Vim name,
-  with User and Workspace scopes. It writes `lua/nvs/settings.lua` and
-  imports VS Code's `settings.json` and `keybindings.json`.
-- **Plugins view:** a front end for lazy.nvim and `:LazyExtras`, plus Open VSX.
-  Searching a VS Code extension name finds the Neovim equivalent.
-- **Extension host:** Tier 1 declarative contributions (themes, snippets,
-  grammars) convert at install time; Tier 2 providers run in Node and reach
-  Neovim as a virtual LSP server; Tier 3 webviews are deferred. The host only
-  runs while a Tier 2 extension is installed.
+- The shell is its own crate, not a Neovide fork: Neovide's skia build needs
+  the MSVC toolchain and prebuilt binaries this machine cannot use, so the
+  window renders with wgpu and a swash glyph atlas instead. Neovide's Neovim
+  bridge, event parser, grid model, keyboard translation and mouse handling
+  are ported (MIT, `shell/LICENSE-NEOVIDE`).
+- One renderer draws everything: Neovim's grids (`ext_multigrid`, floats by
+  z-index) and the chrome, as cells in the same 8x12 pixel font, so the house
+  font stays crisp. The cmdline, popup menu and messages stay in the grid,
+  drawn by noice, blink and snacks; noice attaches its own in-process UI, so
+  the shell parses those events and leaves them to it.
+- `lua/nvs/bridge.lua` streams mode, buffers, cursor, branch, diagnostics,
+  LSP clients, the stage and AI state to the shell with `rpcnotify`, plus the
+  settings schema and the plugin list on request. Shell actions go back as
+  Neovim commands and Lua calls, so everything stays scriptable.
+- **Settings screen:** 12 categories and 56 settings that all do something in
+  this runtime (the mockup's minimap, extension-host and workspace-scope rows
+  were dropped rather than shown inert), searchable by Vim name, each showing
+  the Lua or command it maps to. Values live in `nvs-settings.json`; every
+  change regenerates `lua/nvs/settings.lua`, which `config/options.lua` loads
+  after LazyVim's defaults so terminal Neovim gets the same settings. Import
+  reads VS Code's `settings.json` and `keybindings.json` and reports what had
+  no equivalent.
+- **Plugins screen:** lazy.nvim's list (loaded, lazy, updates, what each one
+  covers from VS Code) and LazyVim's extras, toggled the way `:LazyExtras`
+  does it. Open VSX is not built.
+- **Extension host:** not built. The design stands: Tier 1 declarative
+  contributions convert at install time; Tier 2 providers run in Node as a
+  virtual LSP server; Tier 3 webviews are deferred.
 
 ## Budgets
 
-- Cold start to an editable buffer under 150 ms, extension host not running.
-- Idle memory under 80 MB without the extension host.
-- The shell never blocks on Neovim.
+Re-based in the 2026-09-25 review after measuring: LazyVim alone takes longer
+than the original 150 ms, and a GPU device takes about 300 ms to create.
+
+- Window visible under 300 ms warm, editable under 600 ms warm.
+  Measured on pHub (RTX 5090, Vulkan, release build): window visible at
+  426 ms, first Neovim flush at 506 ms.
+- Idle memory under 200 MB for shell plus Neovim (measured: 130 MB + 54 MB).
+- The shell never blocks on Neovim: the bridge runs on its own thread, the
+  editor model on another, subprocess work (ripgrep, git) on task threads.
 
 ## Look
 
@@ -134,11 +154,13 @@ rather than emoji.
 ## Phases
 
 0. Design preview and the runtime (done)
-1. Shell MVP: Neovide fork, workbench layout, native cmdline and messages
-2. Panels: Problems, Outline, Search, Git, Terminal, Debug; Ask and coach in the window
-3. Settings and Plugins screens
-4. Extension host
-5. Packaging, Windows first
+1. Shell: bridge, renderer, workbench layout, palette (done)
+2. Panels: Problems, Output, Search, Source control (done); Outline, Debug and
+   a native terminal panel are not built (the terminal opens in the grid)
+3. Settings, Plugins, Learn and Welcome screens (done); Ask stays in the grid
+4. Extension host (not started)
+5. Packaging: a release build with the icon, a Start-menu shortcut and an
+   `nvs` launcher exist; no installer yet
 
 ## License
 
