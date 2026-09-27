@@ -1,0 +1,34 @@
+{
+  "name": "generic-ls",
+  "displayName": "Acme Generic LS",
+  "description": "A synthetic lsp-tier extension for tests/verify_vsx.lua: a bundled server nvim-lspconfig does not know, activated on startup, contributing one language (its server is for .acme files, not for every buffer).",
+  "version": "1.0.0",
+  "publisher": "acme",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "acme",
+        "aliases": [
+          "Acme"
+        ],
+        "extensions": [
+          ".acme"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "acme.go",
+        "title": "Acme: Go"
+      }
+    ]
+  }
+}

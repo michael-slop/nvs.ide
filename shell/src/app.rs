@@ -111,6 +111,8 @@ pub struct AppConfig {
     pub start_screen_part: Option<String>,
     /// Scripted input against the chrome, each this long after the first flush (the --do flag).
     pub script: Vec<(Duration, ScriptAction)>,
+    /// Never show a window: render offscreen (screenshots and tests while a recording runs).
+    pub hidden: bool,
 }
 
 /// One scripted input step: what a person would do with the mouse or keyboard on the chrome.
@@ -172,6 +174,7 @@ pub struct App {
     screenshot_done: bool,
     sends_done: bool,
     script_done: usize,
+    redraw_pending: bool,
     next_wake: Option<Instant>,
 }
 
@@ -205,6 +208,7 @@ impl App {
             screenshot_done: false,
             sends_done: false,
             script_done: 0,
+            redraw_pending: false,
             next_wake: None,
         };
         event_loop.run_app(&mut app)?;
@@ -280,8 +284,11 @@ impl App {
         self.request_redraw();
     }
 
-    fn request_redraw(&self) {
-        if let Some(w) = &self.window {
+    fn request_redraw(&mut self) {
+        if self.config.hidden {
+            // A hidden window gets no redraw events; about_to_wait renders instead.
+            self.redraw_pending = true;
+        } else if let Some(w) = &self.window {
             w.request_redraw();
         }
     }
@@ -454,6 +461,7 @@ impl App {
     /// concerned (the Neovim grid gets keys through nvim_input instead of winit events).
     fn run_script_action(&mut self, action: ScriptAction) {
         use winit::keyboard::ModifiersState;
+        log::debug!("script: {:?} (keyboard owner {:?}, screen {:?})", action, self.workbench.keyboard_owner(), self.workbench.active_screen);
         match action {
             ScriptAction::Click { x, y, right } => {
                 self.ui_input.mouse = (x, y);
@@ -600,6 +608,7 @@ impl App {
     }
 
     fn handle_nvs(&mut self, event: &str, payload: Value) {
+        log::debug!("nvs event {event}");
         match event {
             "state" => match decode::<NvimState>(payload) {
                 Ok(state) => {
@@ -626,6 +635,18 @@ impl App {
             "settings_report" => match decode::<ImportReport>(payload) {
                 Ok(r) => self.workbench.set_import_report(r),
                 Err(e) => log::warn!("bad nvs settings_report: {e}"),
+            },
+            "vsx" => match decode::<crate::workbench::plugins::VsxModel>(payload) {
+                Ok(m) => self.workbench.plugins.set_vsx(m),
+                Err(e) => log::warn!("bad nvs vsx: {e}"),
+            },
+            "vsx_search" => match decode::<crate::workbench::plugins::VsxSearch>(payload) {
+                Ok(s) => self.workbench.plugins.set_search(s),
+                Err(e) => log::warn!("bad nvs vsx_search: {e}"),
+            },
+            "vsx_progress" => match decode::<crate::workbench::plugins::VsxProgress>(payload) {
+                Ok(p) => self.workbench.plugins.set_progress(p),
+                Err(e) => log::warn!("bad nvs vsx_progress: {e}"),
             },
             // Neovim asks the window to show one of its screens (:NvsSettings, :NvsWelcome).
             "open" => {
@@ -658,6 +679,14 @@ impl ApplicationHandler<UserEvent> for App {
             .with_visible(false)
             .with_theme(Some(winit::window::Theme::Dark))
             .with_window_icon(Self::icon());
+        // Wayland's app id and X11's WM_CLASS, matching nvs-ide.desktop, so the desktop
+        // shows the release's icon and name for the window (Wayland ignores window icons).
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let attributes = {
+            use winit::platform::{wayland::WindowAttributesExtWayland, x11::WindowAttributesExtX11};
+            let attributes = WindowAttributesExtWayland::with_name(attributes, "nvs-ide", "nvs-ide");
+            WindowAttributesExtX11::with_name(attributes, "nvs-ide", "nvs-ide")
+        };
         let window = match event_loop.create_window(attributes) {
             Ok(w) => Arc::new(w),
             Err(e) => {
@@ -680,7 +709,13 @@ impl ApplicationHandler<UserEvent> for App {
         self.fonts = Some(fonts);
         timing::mark("fonts loaded");
 
-        match Gpu::new(window.clone(), self.config.backends) {
+        let gpu = if self.config.hidden {
+            let s = window.inner_size();
+            Gpu::new_offscreen(s.width.max(1), s.height.max(1), self.config.backends)
+        } else {
+            Gpu::new(window.clone(), self.config.backends)
+        };
+        match gpu {
             Ok(gpu) => {
                 log::info!("gpu ready: {} via {:?}", gpu.adapter_name, gpu.backend);
                 self.workbench.log(format!("renderer: {} via {:?}", gpu.adapter_name, gpu.backend));
@@ -697,8 +732,12 @@ impl ApplicationHandler<UserEvent> for App {
         // Show the window now, already painted: a hidden window's surface reports itself
         // occluded, so waiting for the first Neovim frame before showing never presents.
         self.render();
-        window.set_visible(true);
-        timing::mark("window visible");
+        if self.config.hidden {
+            timing::mark("offscreen (window stays hidden)");
+        } else {
+            window.set_visible(true);
+            timing::mark("window visible");
+        }
 
         if self.config.open_panel {
             self.workbench.toggle_panel(Some(PanelTab::Problems));
@@ -931,6 +970,11 @@ impl ApplicationHandler<UserEvent> for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        if self.config.hidden && self.redraw_pending {
+            self.redraw_pending = false;
+            self.render();
+            self.schedule_wakeups(event_loop);
+        }
         if self.exiting && self.next_wake.is_none() {
             // Neovim said it is leaving; if the process lingers, do not keep the window forever.
             event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now() + Duration::from_secs(2)));

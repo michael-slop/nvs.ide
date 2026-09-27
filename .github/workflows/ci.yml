@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  NVIM_VERSION: v0.12.1
+  # nvim-linux-x86_64.tar.gz of NVIM_VERSION; Neovim publishes no checksum file, this is the
+  # digest GitHub shows for the release asset (scripts/package.sh pins the same one).
+  NVIM_LINUX_SHA256: ab757a1fd9ad307d53d2df4045698906a7ca3993d92260dd8fe49108712d57d0
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Neovim (the release zip; winget is unreliable on runners)
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'nvim-win64.zip'
+          Invoke-WebRequest -Uri "https://github.com/neovim/neovim/releases/download/$env:NVIM_VERSION/nvim-win64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'nvim')
+          Join-Path $env:RUNNER_TEMP 'nvim\nvim-win64\bin' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Versions
+        run: |
+          nvim --version | Select-Object -First 1
+          cargo --version
+          rustc --version
+          node --version
+
+      - name: Build the window (release)
+        working-directory: shell
+        run: cargo build --release
+
+      - name: Test the window (unit tests and the headless attach test)
+        working-directory: shell
+        run: cargo test --release
+
+      - name: Extension host tests
+        if: hashFiles('tests/exthost/run.mjs') != ''
+        run: node tests/exthost/run.mjs
+
+      - name: Lua syntax (loadfile compiles every Lua file without running it)
+        run: |
+          $script = Join-Path $env:RUNNER_TEMP 'lua_syntax.lua'
+          @'
+          local files = {}
+          for _, pattern in ipairs({ "runtime/**/*.lua", "tests/**/*.lua", "shell/src/**/*.lua" }) do
+            vim.list_extend(files, vim.fn.glob(pattern, true, true))
+          end
+          local bad = 0
+          for _, f in ipairs(files) do
+            local fn, err = loadfile(f)
+            if not fn then
+              bad = bad + 1
+              io.stderr:write(err .. "\n")
+            end
+          end
+          io.write(("%d Lua files, %d with syntax errors\n"):format(#files, bad))
+          os.exit(bad == 0 and 0 or 1)
+          '@ | Set-Content -Path $script -Encoding utf8
+          nvim --clean --headless -c "luafile $script"
+
+      - name: Health check provider (:checkhealth nvs, no plugins)
+        run: |
+          $runtime = (Join-Path $PWD.Path 'runtime') -replace '\\', '/'
+          nvim --clean --headless --cmd "set rtp^=$runtime" -c "luafile tests/verify_health.lua"
+
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # The build needs none of these: winit and wgpu open the X11, Wayland and Vulkan
+      # libraries at run time. The screenshot step does: Xvfb for a display, Mesa's
+      # software Vulkan (lavapipe) and OpenGL (llvmpipe) for a GPU, and the X11 and
+      # xkbcommon libraries winit loads. unzip is how extensions unpack on Linux.
+      - name: System packages for the screenshot
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth mesa-vulkan-drivers libvulkan1 libegl1 libgl1-mesa-dri \
+            libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libxkbcommon0 libxkbcommon-x11-0 unzip
+
+      - name: Neovim (the release tarball, checked against its pinned sha256)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" "https://github.com/neovim/neovim/releases/download/$NVIM_VERSION/nvim-linux-x86_64.tar.gz"
+          echo "$NVIM_LINUX_SHA256  $RUNNER_TEMP/nvim.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Versions
+        run: |
+          nvim --version | head -1
+          cargo --version
+          rustc --version
+          node --version
+
+      - name: Build the window (release)
+        working-directory: shell
+        run: cargo build --release
+
+      - name: Test the window (unit tests and the headless attach test)
+        working-directory: shell
+        run: cargo test --release
+
+      - name: Extension host tests
+        run: node tests/exthost/run.mjs
+
+      - name: Health check provider (:checkhealth nvs, no plugins)
+        run: nvim --clean --headless --cmd "set rtp^=$PWD/runtime" -c "luafile tests/verify_health.lua"
+
+      - name: Runtime checks (LazyVim installed into a sandbox, then every verify_*.lua)
+        run: bash tests/run.sh --sandbox "$RUNNER_TEMP/nvs-sb"
+
+      # The window, offscreen, in the sandbox the runtime checks just filled: it starts
+      # Neovim, draws the workbench and writes a PNG, and the check fails a blank frame.
+      - name: Screenshot of the window (Xvfb, software Vulkan)
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/nvs-sb/config
+          XDG_DATA_HOME: ${{ runner.temp }}/nvs-sb/data
+          XDG_STATE_HOME: ${{ runner.temp }}/nvs-sb/state
+          XDG_CACHE_HOME: ${{ runner.temp }}/nvs-sb/cache
+          NVS_TEST: '1'
+        run: |
+          timeout 180 xvfb-run -a -s "-screen 0 1920x1080x24" \
+            shell/target/release/nvs-ide --startuptime --screenshot "$RUNNER_TEMP/nvs-ide-linux.png"
+          python3 tests/screenshot_check.py "$RUNNER_TEMP/nvs-ide-linux.png"
+
+      - name: Keep the screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nvs-ide-linux-screenshot
+          path: ${{ runner.temp }}/nvs-ide-linux.png
+          if-no-files-found: ignore

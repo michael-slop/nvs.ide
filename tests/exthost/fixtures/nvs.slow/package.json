@@ -1,0 +1,10 @@
+{
+  "name": "slow",
+  "displayName": "Slow test extension",
+  "description": "Its hover provider ignores the cancellation token and answers after 8 s; a cancelled hover must still be answered with RequestCancelled at once.",
+  "version": "1.0.0",
+  "publisher": "nvs",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": ["*"]
+}

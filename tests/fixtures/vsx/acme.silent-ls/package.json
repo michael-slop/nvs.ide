@@ -1,0 +1,23 @@
+{
+  "name": "silent-ls",
+  "displayName": "Acme Silent LS",
+  "description": "A synthetic lsp-tier extension for tests/verify_vsx.lua: a bundled server nvim-lspconfig does not know and no language declared anywhere, so Neovim cannot tell which files it is for and must not enable it.",
+  "version": "1.0.0",
+  "publisher": "acme",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "acme.silent",
+        "title": "Acme: Silent"
+      }
+    ]
+  }
+}

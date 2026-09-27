@@ -1,0 +1,22 @@
+{
+  "name": "synthetic",
+  "displayName": "Synthetic test extension",
+  "description": "Exercises the nvs.ide extension host: completion, hover, diagnostics, a command, formatting, settings, state, progress and an unsupported member.",
+  "version": "1.0.0",
+  "publisher": "nvs",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:plaintext"],
+  "contributes": {
+    "configuration": {
+      "title": "Synthetic",
+      "properties": {
+        "synthetic.greeting": { "type": "string", "default": "hi", "description": "Word the completion item inserts." },
+        "synthetic.flags": { "type": "array", "items": { "type": "string" }, "description": "No default on purpose: the host must answer [] from the type." }
+      }
+    },
+    "commands": [
+      { "command": "synthetic.echo", "title": "Synthetic: echo the arguments" }
+    ]
+  }
+}

@@ -43,15 +43,76 @@ was built from, and [docs/design.md](docs/design.md) is the design.
 |---|---|
 | `runtime/`: LazyVim + stages, coach, Ask, lessons, local AI | Works in the window, in Neovide, or in a terminal |
 | `shell/`: the native window (Rust, wgpu, own renderer) | Works: workbench, palette, Settings, Plugins, Learn, Welcome |
-| Settings screen | 56 settings in 12 categories, writes `lua/nvs/settings.lua`, imports VS Code's `settings.json` and `keybindings.json` |
-| Plugins screen | lazy.nvim's list and LazyVim's extras, with enable/disable and update |
-| Debugger view, workspace-scoped settings | Not built; `Space d` works once the dap.core extra is on |
-| Open VSX extension host | Not built |
+| Settings screen | 59 settings in 13 categories, writes `lua/nvs/settings.lua`, imports VS Code's `settings.json` and `keybindings.json` |
+| Plugins screen | lazy.nvim's list, LazyVim's extras, and VS Code extensions from Open VSX (Browse, install, enable, uninstall) |
+| VS Code extensions | Themes and snippets convert at install; extensions that ship a language server run under Neovim's LSP client; the rest run in a Node extension host (Prettier formats through it). Webview extensions are not supported. See [docs/extensions.md](docs/extensions.md) |
+| Packaging | Windows zip and per-user installer (`scripts/package.ps1`), Linux tarball (`scripts/package.sh`), each with Neovim, ripgrep and the house font bundled; CI on Windows and Linux and tagged releases on GitHub Actions |
+| Debugger view, workspace-scoped settings, macOS build | Not built; `Space d` works once the dap.core extra is on |
 
 ## Run it
 
 Everything runs as a separate Neovim app (`NVIM_APPNAME=nvs-ide`), so your own
 config, plugins and data are left alone.
+
+### Install
+
+Pushing a `v*` tag builds these and attaches them to a GitHub release
+(`.github/workflows/release.yml`); until the first tag, build them locally with
+`scripts\package.ps1` or `scripts/package.sh` (below).
+
+#### Windows
+
+- **`nvs.ide-<version>-setup.exe`** installs for the current user, no admin,
+  into `%LOCALAPPDATA%\Programs\nvs.ide`, with a Start-menu shortcut and, if you
+  tick it, `nvs` on your PATH (`nvs .` opens a folder from any terminal). It
+  looks for git, a C compiler and tree-sitter and prints the winget commands
+  for the ones you don't have. Uninstalling removes only the install folder
+  (including what LazyVim wrote into its `runtime\`, such as `lazyvim.json`);
+  your data folder (`%LOCALAPPDATA%\nvs-ide-data`: plugins, models, settings)
+  stays.
+- **`nvs.ide-<version>-windows-x64.zip`** is the same files without the
+  installer: unzip anywhere and run `nvs-ide.exe` (or `nvs.cmd`).
+
+Both bundle Neovim 0.12, ripgrep and the house font. You still need git (plugins
+are cloned with it), a C compiler and the tree-sitter CLI (syntax parsers):
+`winget install Git.Git BrechtSanders.WinLibs.POSIX.UCRT tree-sitter.tree-sitter-cli`.
+Optional: fd (faster file pickers), Node.js (VS Code extensions) and llama.cpp
+(local AI).
+
+#### Linux
+
+**`nvs.ide-<version>-linux-x86_64.tar.gz`** holds the same files for x86_64 Linux
+with glibc 2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 36, Arch and later).
+Unpack it anywhere and run `./install.sh`: it links `nvs` and `nvs-ide` into
+`~/.local/bin` and adds nvs.ide to the application menu, with no root and
+nothing outside your home folder (`./install.sh --uninstall` takes exactly that
+back out). Or skip it and run `./nvs-ide` from the folder.
+
+```sh
+mkdir -p ~/.local/opt
+tar -xzf nvs.ide-<version>-linux-x86_64.tar.gz -C ~/.local/opt   # any folder works
+~/.local/opt/nvs.ide/install.sh
+nvs .
+```
+
+It bundles Neovim 0.12, ripgrep and the house font. The window needs a Vulkan or
+OpenGL driver (Mesa's are fine) under Wayland or X11. You still need git, a C
+compiler, `unzip` (VS Code extensions are zip files) and tree-sitter 0.26.1 or
+newer: `sudo pacman -S git base-devel unzip tree-sitter-cli` on Arch;
+`sudo apt install git build-essential unzip` on Debian and Ubuntu, plus
+tree-sitter from its [releases](https://github.com/tree-sitter/tree-sitter/releases)
+(Ubuntu 24.04's package is 0.20, too old). `:checkhealth nvs` names anything
+missing, with the command for your distribution.
+
+Your data is in `~/.local/share/nvs-ide` (plugins, models, settings) and the
+config link in `~/.config/nvs-ide`; uninstalling leaves both.
+
+#### Building it
+ `nvs-ide --version` says which runtime and Neovim it found, and
+`:checkhealth nvs` inside the editor lists all of the above.
+`scripts\package.ps1 -Version x.y.z` builds both Windows files from a checkout
+(the setup exe needs Inno Setup 6), and `scripts/package.sh x.y.z` the Linux
+tarball. Or build the window yourself:
 
 ```powershell
 git clone https://github.com/michael-slop/nvs.ide
@@ -59,6 +120,9 @@ cd nvs.ide\shell
 cargo build --release        # the window: shell\target\release\nvs-ide.exe
 .\target\release\nvs-ide.exe # or double-click it; nvs-ide --help lists the options
 ```
+
+On Linux the same, with `./target/release/nvs-ide`; the build needs only Rust
+and a C compiler, since the window loads X11, Wayland and Vulkan at run time.
 
 The first start links the app's config folder to `runtime/`, installs LazyVim
 and its plugins (a minute), and shows the Welcome screen to pick a stage.
@@ -73,8 +137,8 @@ Without the window:
 **Needs:** Neovim 0.11 or newer (0.12 tested), git, a C compiler, curl, and the
 `tree-sitter` CLI for LazyVim's syntax parsers; ripgrep for the Search view.
 fd and lazygit are recommended. To build the window: Rust stable (the GNU
-toolchain works on Windows; no MSVC needed) and a Vulkan, DirectX 12 or OpenGL
-driver. On Windows, run `git config --global core.longpaths true` if a plugin
+toolchain works on Windows, with `rustup override set stable-x86_64-pc-windows-gnu`
+in `shell\`; no MSVC needed) and a Vulkan, DirectX 12 or OpenGL driver. On Windows, run `git config --global core.longpaths true` if a plugin
 fails to clone.
 
 ### The window
@@ -157,6 +221,8 @@ docs/design.md          the design
 docs/preview/           interactive mockup (build with scripts/build-preview.py)
 tests/                  headless checks for the runtime
 scripts/try.ps1         run the runtime next to your own config, without the window
+scripts/package.*       release packages: .ps1 for Windows, .sh for Linux
+installer/              the Inno Setup script; linux/ has the launcher, menu entry and install.sh
 ```
 
 ## Tests
@@ -166,6 +232,10 @@ scripts/try.ps1         run the runtime next to your own config, without the win
 cd shell; cargo test                 # the window: unit tests and the attach test
 ```
 
+On Linux and macOS, `bash tests/run.sh` is the same runner. CI runs both halves
+on Windows and Linux, and on Linux also takes an offscreen screenshot of the
+window under Xvfb and fails it if the frame is blank.
+
 `tests/verify.lua` checks startup: commands, stage keymaps (and restoring
 LazyVim's own at Stage 4), saved state and its migration, the lessons, Ask, and
 the Markdown renderer. `tests/verify_ui.lua` runs inside Neovim's main loop and
@@ -173,7 +243,9 @@ types like a person: Insert-mode behaviour at each stage, Ask's window, the
 explorer and search keys, the tutor, settings validation, Ask's answers and the
 theme. `tests/ai_live.lua` runs against a real llama-server: Ask answered by a
 model, a Hugging Face download, ghost text, and stopping the server's process
-tree. Each file's header has the commands.
+tree. `tests/verify_health.lua` runs `:checkhealth nvs` headless and checks it
+reports every tool, the config link, the data folder and the window. Each file's
+header has the commands.
 
 After editing `runtime/kb/ask.json`, the lessons or the icon, rebuild the
 mockup with `python scripts/build-preview.py`.

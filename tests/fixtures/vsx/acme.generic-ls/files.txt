@@ -1,0 +1,3 @@
+package.json
+dist/extension.js
+dist/server.js

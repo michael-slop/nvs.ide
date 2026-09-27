@@ -7,14 +7,16 @@ use nvs_shell::font::FontOptions;
 
 const USAGE: &str = "nvs-ide [options] [files...] [-- nvim args...]
 
-  --nvim-bin <path>     Neovim executable (default: nvim on PATH)
+  --nvim-bin <path>     Neovim executable (default: the Neovim bundled in nvim/ next to the exe, else nvim on PATH)
   --config <appname>    NVIM_APPNAME to run (default: nvs-ide; 'default' = your own config)
   --renderer <name>     auto | vulkan | dx12 | gl
   --font <guifont>      e.g. \"BigBlueTerm437 Nerd Font Mono:h9\" (overrides 'guifont')
   --size <WxH>          initial window size in logical pixels (default 1280x800)
-  --startuptime         print startup timings to stderr after the first frame
+  --startuptime         print the version to stderr at start, and the startup timings after the first frame
   --tabline             take over the tab line (ext_tabline)
-  --screenshot <png>    save the window to a PNG (1500 ms after the first flush) and quit
+  --screenshot <png>    save the window to a PNG (1500 ms after the first flush) and quit;
+                        rendered offscreen, no window appears (add --show to see it)
+  --hidden              never show a window, render offscreen (for tests and timings)
   --screenshot-after <ms>
   --quit-after <ms>     quit this long after the first flush
   --send <keys>         feed keys (nvim_input notation) 400 ms after the first flush; repeatable
@@ -25,9 +27,43 @@ const USAGE: &str = "nvs-ide [options] [files...] [-- nvim args...]
   --screen <name>       open a screen (welcome|settings|plugins|learn); settings:Keys picks a category
   --do <ms>:<what>:<arg> scripted input after the first flush; repeatable, in order:
                         click:x,y  rclick:x,y  type:text  key:ctrl+shift+p  send:<Esc>
+  --version             print the version, the runtime folder it found and the Neovim it would start
   --help";
 
-fn parse_args() -> Result<AppConfig, String> {
+/// Why argument parsing ends without a run: something to print, and the exit code that goes with it.
+enum Stop {
+    Help,
+    Version,
+    Error(String),
+}
+
+impl From<&str> for Stop {
+    fn from(msg: &str) -> Self {
+        Stop::Error(msg.to_string())
+    }
+}
+
+impl From<String> for Stop {
+    fn from(msg: String) -> Self {
+        Stop::Error(msg)
+    }
+}
+
+/// What `--version` prints, and the head of the `--startuptime` report: a pasted report then says
+/// which build and which runtime folder were measured.
+fn version_report() -> String {
+    let runtime = match nvs_shell::bridge::find_runtime() {
+        Some(path) => path.display().to_string(),
+        None => "not found (keep runtime/ next to the exe, or set NVS_RUNTIME)".to_string(),
+    };
+    let nvim = match nvs_shell::bridge::bundled_nvim() {
+        Some(path) => format!("{} (bundled)", path.display()),
+        None => "nvim on PATH".to_string(),
+    };
+    format!("nvs-ide {}\nruntime: {runtime}\nnvim: {nvim}", env!("CARGO_PKG_VERSION"))
+}
+
+fn parse_args() -> Result<AppConfig, Stop> {
     let mut bridge = BridgeConfig::default();
     let mut backends = wgpu::Backends::PRIMARY;
     let mut font = None;
@@ -44,10 +80,13 @@ fn parse_args() -> Result<AppConfig, String> {
     let mut start_screen = None;
     let mut start_screen_part: Option<String> = None;
     let mut script = Vec::new();
+    let mut hidden = false;
+    let mut show = false;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--help" | "-h" => return Err(USAGE.into()),
+            "--help" | "-h" => return Err(Stop::Help),
+            "--version" | "-V" => return Err(Stop::Version),
             "--nvim-bin" => bridge.nvim_bin = args.next().ok_or("--nvim-bin needs a path")?,
             "--config" => {
                 let name = args.next().ok_or("--config needs a name")?;
@@ -59,7 +98,7 @@ fn parse_args() -> Result<AppConfig, String> {
                     Some("vulkan") => wgpu::Backends::VULKAN,
                     Some("dx12") => wgpu::Backends::DX12,
                     Some("gl") => wgpu::Backends::GL,
-                    Some(other) => return Err(format!("unknown renderer {other}")),
+                    Some(other) => return Err(format!("unknown renderer {other}").into()),
                 }
             }
             "--font" => {
@@ -84,6 +123,8 @@ fn parse_args() -> Result<AppConfig, String> {
             }
             "--send" => sends.push(args.next().ok_or("--send needs keys")?),
             "--panel" => open_panel = true,
+            "--hidden" => hidden = true,
+            "--show" => show = true,
             "--palette" => open_palette = true,
             "--view" => {
                 start_view = Some(match args.next().as_deref() {
@@ -94,7 +135,7 @@ fn parse_args() -> Result<AppConfig, String> {
                     Some("ask") => nvs_shell::workbench::View::Ask,
                     Some("learn") => nvs_shell::workbench::View::Learn,
                     Some("debug") => nvs_shell::workbench::View::Debug,
-                    other => return Err(format!("unknown view {other:?}")),
+                    other => return Err(format!("unknown view {other:?}").into()),
                 })
             }
             "--search" => start_search = Some(args.next().ok_or("--search needs text")?),
@@ -108,17 +149,19 @@ fn parse_args() -> Result<AppConfig, String> {
                     "settings" => nvs_shell::workbench::Screen::Settings,
                     "plugins" => nvs_shell::workbench::Screen::Plugins,
                     "learn" => nvs_shell::workbench::Screen::Learn,
-                    other => return Err(format!("unknown screen {other}")),
+                    other => return Err(format!("unknown screen {other}").into()),
                 });
                 start_screen_part = part;
             }
             "--" => {
                 bridge.nvim_args.extend(args.by_ref());
             }
-            other if other.starts_with('-') => return Err(format!("unknown option {other}\n\n{USAGE}")),
+            other if other.starts_with('-') => return Err(format!("unknown option {other}\n\n{USAGE}").into()),
             file => bridge.files.push(file.to_string()),
         }
     }
+    // A screenshot run never shows a window unless asked: someone may be recording the screen.
+    let hidden = hidden || (screenshot.is_some() && !show);
     Ok(AppConfig {
         bridge,
         backends,
@@ -136,12 +179,13 @@ fn parse_args() -> Result<AppConfig, String> {
         start_screen,
         start_screen_part,
         script,
+        hidden,
     })
 }
 
 #[cfg(windows)]
 fn attach_console() {
-    // A windows-subsystem exe has no console; borrow the parent's so --startuptime and logs show.
+    // A windows-subsystem exe has no console; borrow the parent's so --version, --startuptime and logs show.
     unsafe {
         windows_sys::Win32::System::Console::AttachConsole(windows_sys::Win32::System::Console::ATTACH_PARENT_PROCESS);
     }
@@ -154,11 +198,23 @@ fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("nvs_shell=info,nvs_ide=info,wgpu_core=warn,wgpu_hal=warn")).init();
     let config = match parse_args() {
         Ok(c) => c,
-        Err(msg) => {
+        Err(Stop::Help) => {
+            println!("{USAGE}");
+            std::process::exit(0);
+        }
+        Err(Stop::Version) => {
+            println!("{}", version_report());
+            std::process::exit(0);
+        }
+        Err(Stop::Error(msg)) => {
             eprintln!("{msg}");
-            std::process::exit(if msg == USAGE { 0 } else { 2 });
+            std::process::exit(2);
         }
     };
+    if config.report_startup {
+        // The timings themselves are printed by the app after the first frame (timing::report).
+        eprintln!("{}", version_report());
+    }
     match App::run(config) {
         Ok(code) => std::process::exit(code),
         Err(e) => {

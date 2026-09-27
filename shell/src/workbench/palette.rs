@@ -46,6 +46,8 @@ pub enum PaletteCommand {
     OpenFile(String),
     Stage(u32),
     Screen(super::Screen),
+    /// The Plugins screen on its Browse tab (Open VSX).
+    Browse,
 }
 
 pub struct Palette {

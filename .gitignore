@@ -9,3 +9,6 @@ shell/target/
 
 .DS_Store
 Thumbs.db
+
+# Packaging output (scripts/package.ps1)
+dist/

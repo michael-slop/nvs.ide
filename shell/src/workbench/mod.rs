@@ -258,6 +258,8 @@ impl Workbench {
             if let Some(part) = self.start_part.take() {
                 if part == "extras" {
                     self.plugins.tab = plugins::Tab::Extras;
+                } else if part == "browse" {
+                    self.plugins.show_browse();
                 }
             }
         }
@@ -509,6 +511,7 @@ impl Workbench {
             shell("Terminal: Toggle", "", "Ctrl+/ (Stage 4)", C::Ex("lua Snacks.terminal()".into())),
             shell("Preferences: Open Settings", "Ctrl+,", "", C::Screen(Screen::Settings)),
             shell("Plugins: Browse", "Ctrl+Shift+X", ":Lazy", C::Screen(Screen::Plugins)),
+            shell("Extensions: Browse Open VSX", "", "", C::Browse),
             shell("Plugins: LazyVim extras", "", ":LazyExtras", C::Ex("LazyExtras".into())),
             shell("Plugins: Update all", "", ":Lazy update", C::Ex("Lazy update".into())),
             shell("Welcome: Choose your stage", "", ":NvsWelcome", C::Screen(Screen::Welcome)),
@@ -569,6 +572,10 @@ impl Workbench {
                 actions.push(Action::FocusGrid);
             }
             PaletteCommand::Screen(s) => self.open_screen(s),
+            PaletteCommand::Browse => {
+                self.plugins.show_browse();
+                self.open_screen(Screen::Plugins);
+            }
         }
     }
 

@@ -11,7 +11,7 @@
 -- moving with LazyVim.
 local M = {}
 
-M.categories = { "Transition", "Keys", "Editor", "Completion", "Local AI", "Appearance", "Workbench", "Files", "Search", "Languages", "Git", "Terminal" }
+M.categories = { "Transition", "Keys", "Editor", "Completion", "Local AI", "Appearance", "Workbench", "Files", "Search", "Languages", "Git", "Terminal", "Plugins" }
 
 local function B(v)
   return v and "true" or "false"
@@ -94,6 +94,13 @@ M.schema = {
   { id = "cmp_ghost", c = "Completion", l = "Preview the selected item inline", d = "Grey text shows what accepting would insert.", t = "bool", def = true, lua = setting_g("cmp_ghost"), restart = true, search = "blink ghost_text" },
   { id = "cmp_accept", c = "Completion", l = "Accept with", t = "select", o = { { "enter", "Enter" }, { "super-tab", "Tab" }, { "default", "Ctrl+Y (Vim default)" } }, def = "enter", lua = setting_g("cmp_accept"), restart = true, search = "blink keymap preset" },
   { id = "cmp_snippets", c = "Completion", l = "Include snippets", t = "bool", def = true, lua = setting_g("cmp_snippets"), restart = true, search = "blink snippets sources" },
+
+  -- Plugins (VS Code extensions from Open VSX; see docs/extensions.md)
+  { id = "exthost", c = "Plugins", l = "Extension host", d = "Runs VS Code extensions that need code (Tier 2) as a Node program Neovim talks to like a language server. On demand starts it only while such an extension is enabled.",
+    t = "select", o = { { "demand", "On demand" }, { "always", "Always" }, { "never", "Never" } }, def = "demand", lua = setting_g("exthost"),
+    apply = function(v) pcall(function() require("nvs.vsx").apply_host_mode(v) end) end, search = "extension host node vscode" },
+  { id = "openvsx", c = "Plugins", l = "Extension registry", d = "Where Browse searches and installs from. Open VSX is the open registry VSCodium uses.", t = "text", def = "https://open-vsx.org", lua = setting_g("openvsx"), search = "registry open vsx marketplace" },
+  { id = "vsx_node", c = "Plugins", l = "Node program", d = "Node 18 or newer runs the extension host and bundled language servers. A name on PATH or a full path.", t = "text", def = "node", lua = setting_g("vsx_node"), search = "node extension host" },
 
   -- Local AI (kept in nvs-ide.json by nvs.ai; these call its commands)
   { id = "ai_on", c = "Local AI", l = "Use a local model", d = "Runs on your machine. Nothing leaves it unless you point the address somewhere else.", t = "bool", def = false,
@@ -462,37 +469,9 @@ end
 -- VS Code import
 ---------------------------------------------------------------------------
 
--- VS Code's settings.json allows comments and trailing commas.
+-- VS Code's settings.json allows comments and trailing commas (nvs.jsonc handles both).
 local function decode_jsonc(text)
-  text = text:gsub("/%*.-%*/", "")
-  local lines = {}
-  for line in (text .. "\n"):gmatch("(.-)\n") do
-    -- Strip // comments outside strings.
-    local out, in_str, i = {}, false, 1
-    while i <= #line do
-      local ch = line:sub(i, i)
-      if in_str then
-        table.insert(out, ch)
-        if ch == "\\" then
-          table.insert(out, line:sub(i + 1, i + 1))
-          i = i + 1
-        elseif ch == '"' then
-          in_str = false
-        end
-      elseif ch == '"' then
-        in_str = true
-        table.insert(out, ch)
-      elseif ch == "/" and line:sub(i + 1, i + 1) == "/" then
-        break
-      else
-        table.insert(out, ch)
-      end
-      i = i + 1
-    end
-    table.insert(lines, table.concat(out))
-  end
-  text = table.concat(lines, "\n"):gsub(",(%s*[%]}])", "%1")
-  return pcall(vim.json.decode, text)
+  return require("nvs.jsonc").decode(text)
 end
 
 function M.vscode_user_dir()

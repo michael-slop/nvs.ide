@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=nvs.ide
+GenericName=Text Editor
+Comment=LazyVim with training wheels
+Exec="@EXEC@" %F
+Icon=nvs-ide
+Terminal=false
+Categories=Development;TextEditor;IDE;
+Keywords=neovim;vim;lazyvim;editor;code;
+StartupWMClass=nvs-ide
+MimeType=text/plain;

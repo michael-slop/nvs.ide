@@ -96,6 +96,17 @@ return {
           return src ~= "snippets"
         end, opts.sources.default)
       end
+      -- Snippets from installed VS Code extensions: blink reads a VS Code-style
+      -- package.json (contributes.snippets) from each folder, as friendly-snippets does.
+      local paths = vim.g.nvs_vsx_snippet_paths
+      if type(paths) == "table" and #paths > 0 then
+        opts.sources = opts.sources or {}
+        opts.sources.providers = opts.sources.providers or {}
+        local snippets = opts.sources.providers.snippets or {}
+        snippets.opts = snippets.opts or {}
+        snippets.opts.search_paths = vim.list_extend(vim.deepcopy(snippets.opts.search_paths or { vim.fn.stdpath("config") .. "/snippets" }), paths)
+        opts.sources.providers.snippets = snippets
+      end
     end,
   },
 

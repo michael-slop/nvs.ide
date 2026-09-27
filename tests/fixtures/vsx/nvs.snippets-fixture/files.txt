@@ -1,0 +1,3 @@
+package.json
+snippets/lua.json
+syntaxes/nvsfixture.tmLanguage.json

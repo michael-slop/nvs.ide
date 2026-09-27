@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Inno Setup on PATH (preinstalled on the Windows runner image)
+        run: |
+          $dir = 'C:\Program Files (x86)\Inno Setup 6'
+          if (-not (Test-Path (Join-Path $dir 'ISCC.exe'))) { throw "ISCC.exe not found in $dir" }
+          $dir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Package (zip and setup exe under dist/)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: ./scripts/package.ps1 -Version $env:TAG
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: |
+            dist/nvs.ide-*-windows-x64.zip
+            dist/nvs.ide-*-setup.exe
+          if-no-files-found: error
+
+  linux:
+    # The oldest Ubuntu GitHub still runs, so the binary needs the oldest glibc (2.35):
+    # a program built against a newer glibc does not start on an older one.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Package (tarball under dist/)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bash scripts/package.sh "$TAG"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: dist/nvs.ide-*-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  # One job makes the release, after both packages exist, so two jobs never race to
+  # create it.
+  release:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/nvs.ide-*-windows-x64.zip
+            dist/nvs.ide-*-setup.exe
+            dist/nvs.ide-*-linux-x86_64.tar.gz
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          # A tag with a suffix (v0.1.0-preview.1, v1.0.0-rc1) is a test build.
+          prerelease: ${{ contains(github.ref_name, '-') }}

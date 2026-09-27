@@ -129,9 +129,13 @@ lessons for VS Code users; exercise lines are checked against
 - **Plugins screen:** lazy.nvim's list (loaded, lazy, updates, what each one
   covers from VS Code) and LazyVim's extras, toggled the way `:LazyExtras`
   does it. Open VSX is not built.
-- **Extension host:** not built. The design stands: Tier 1 declarative
-  contributions convert at install time; Tier 2 providers run in Node as a
-  virtual LSP server; Tier 3 webviews are deferred.
+- **VS Code extensions:** installed from Open VSX by the Plugins screen's
+  Browse tab and sorted into tiers at install time (docs/extensions.md is the
+  contract): Tier 1 themes, snippets and language ids convert at install;
+  extensions that ship a language server run under Neovim's own LSP client;
+  Tier 2 providers run in the extension host, a Node program that loads the
+  extension with a `vscode` shim and speaks LSP to Neovim; Tier 3 webviews
+  are not supported and say so.
 
 ## Budgets
 
@@ -158,9 +162,16 @@ rather than emoji.
 2. Panels: Problems, Output, Search, Source control (done); Outline, Debug and
    a native terminal panel are not built (the terminal opens in the grid)
 3. Settings, Plugins, Learn and Welcome screens (done); Ask stays in the grid
-4. Extension host (not started)
-5. Packaging: a release build with the icon, a Start-menu shortcut and an
-   `nvs` launcher exist; no installer yet
+4. Extensions: Open VSX client, tiering, theme and snippet conversion, bundled
+   language servers, the Node extension host (built 2026-09-25)
+5. Packaging: release build with the icon, `scripts/package.ps1` (zip with
+   bundled Neovim and ripgrep, Inno Setup installer), CI and release
+   workflows, `:checkhealth nvs` (built 2026-09-25)
+6. Linux: the same window and runtime on x86_64 Linux (Wayland or X11, Vulkan
+   or OpenGL), `scripts/package.sh` (tarball with bundled Neovim, ripgrep and
+   the house font, a per-user `install.sh` with a menu entry), a Linux CI job
+   with an offscreen screenshot under Xvfb (built 2026-09-27). macOS is not
+   built.
 
 ## License
 

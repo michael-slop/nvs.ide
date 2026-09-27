@@ -5,9 +5,44 @@ local M = {}
 
 local chan = vim.g.nvs_channel
 
+-- Errors here would vanish (nothing shows a failed rpcnotify or a timer callback's error
+-- inside the window), so they go to stdpath("log")/nvs-bridge.log as well as :messages.
+local function log_error(where, err)
+  local line = ("%s bridge %s: %s"):format(os.date("%Y-%m-%d %H:%M:%S"), where, tostring(err))
+  pcall(function()
+    local f = io.open(vim.fn.stdpath("log") .. "/nvs-bridge.log", "a")
+    if f then
+      f:write(line, "\n")
+      f:close()
+    end
+  end)
+  vim.schedule(function()
+    vim.notify(line, vim.log.levels.WARN, { title = "nvs.ide" })
+  end)
+end
+
+-- NVS_BRIDGE_TRACE=1 also records every event sent, with its encoded size.
+local trace = vim.env.NVS_BRIDGE_TRACE == "1"
+
 local function send(event, payload)
   if chan then
-    pcall(vim.rpcnotify, chan, "nvs", event, payload)
+    local ok, err = pcall(vim.rpcnotify, chan, "nvs", event, payload)
+    if not ok then
+      log_error("send " .. tostring(event), err)
+    elseif trace then
+      local eok, enc = pcall(vim.mpack.encode, payload)
+      log_error("trace", ("sent %s (%s bytes)"):format(tostring(event), eok and #enc or "?"))
+    end
+  end
+end
+
+-- Run a callback and report its error instead of losing it.
+local function guarded(where, fn)
+  return function(...)
+    local ok, err = pcall(fn, ...)
+    if not ok then
+      log_error(where, err)
+    end
   end
 end
 
@@ -135,6 +170,55 @@ function M.plugin_action(what, name)
   end, 300)
 end
 
+-- VS Code extensions (docs/extensions.md). Neovim -> shell: "vsx" (installed + status),
+-- "vsx_search" (results), "vsx_progress" (install stages).
+function M.vsx_state()
+  local ok, vsx = pcall(require, "nvs.vsx")
+  if not ok then
+    return { installed = {}, status = { host = { running = false, mode = "never", node = nil, extensions = 0 }, registry = "" } }
+  end
+  return { installed = vsx.list(), status = vsx.status() }
+end
+
+function M.push_vsx()
+  local ok, state = pcall(M.vsx_state)
+  if not ok then
+    return log_error("vsx_state", state)
+  end
+  send("vsx", state)
+end
+
+-- Shell -> Neovim: vsx("search", query) | vsx("install", id) | vsx("uninstall", id)
+-- | vsx("enable", id, bool) | vsx("refresh")
+function M.vsx(action, a, b)
+  local ok, vsx = pcall(require, "nvs.vsx")
+  if not ok then
+    -- The first line of a require error is the reason; the rest is the search path.
+    local why = tostring(vsx):match("^[^\n]*") or tostring(vsx)
+    return send("vsx_search", { query = a or "", results = {}, error = "The extension system did not load: " .. why })
+  end
+  if action == "search" then
+    vsx.search(a or "", function(err, results)
+      send("vsx_search", { query = a or "", results = results or {}, error = err })
+    end)
+  elseif action == "install" then
+    vsx.install(a, function(err)
+      if err then
+        vim.notify(err, vim.log.levels.WARN, { title = "nvs.ide · extensions" })
+      end
+      M.push_vsx()
+    end)
+  elseif action == "uninstall" then
+    vsx.uninstall(a)
+    M.push_vsx()
+  elseif action == "enable" then
+    vsx.set_enabled(a, b == true)
+    M.push_vsx()
+  else
+    M.push_vsx()
+  end
+end
+
 -- Every diagnostic in every buffer, for the Problems panel.
 function M.diagnostics()
   local names = { [vim.diagnostic.severity.ERROR] = "error", [vim.diagnostic.severity.WARN] = "warn",
@@ -235,22 +319,39 @@ function M.setup()
       end, 500)
     end,
   })
-  -- Say hello once everything is loaded.
-  vim.api.nvim_create_autocmd("VimEnter", {
+  -- Install progress and state changes from the extension system.
+  pcall(function()
+    local vsx = require("nvs.vsx")
+    vsx.on_progress = function(id, stage, message)
+      send("vsx_progress", { id = id, stage = stage, message = message or "" })
+      if stage == "done" or stage == "error" then
+        vim.schedule(M.push_vsx)
+      end
+    end
+  end)
+  vim.api.nvim_create_autocmd("User", {
     group = group,
-    once = true,
+    pattern = "NvsVsxChanged",
     callback = function()
-      push_state()
-      send("diagnostics", M.diagnostics())
-      send("settings", M.settings())
-      vim.defer_fn(function()
-        send("plugins", M.plugins())
-      end, 1000)
+      vim.schedule(M.push_vsx)
     end,
   })
-  if vim.v.vim_did_enter == 1 then
+  -- Say hello once everything is loaded. nvs.setup() runs at VeryLazy, which is after
+  -- VimEnter in the window, so the autocmd is only for the rare early load; the direct
+  -- call is the path that actually runs.
+  local function hello()
     push_state()
+    send("diagnostics", M.diagnostics())
     send("settings", M.settings())
+    vim.defer_fn(guarded("startup push", function()
+      send("plugins", M.plugins())
+      M.push_vsx()
+    end), 1000)
+  end
+  if vim.v.vim_did_enter == 1 then
+    hello()
+  else
+    vim.api.nvim_create_autocmd("VimEnter", { group = group, once = true, callback = hello })
   end
 end
 

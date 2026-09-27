@@ -1,0 +1,14 @@
+package.json
+package-json-schema.json
+eslint_icon.png
+esbuild.js
+agents.md
+SECURITY.md
+readme.md
+License.txt
+changelog.md
+.CodeQL.yml
+server/out/eslintServer.js
+images/2_1_10/eslint-status.png
+images/2_1_10/eslint-dialog.png
+client/out/extension.js

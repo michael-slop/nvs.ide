@@ -24,7 +24,10 @@ pub struct FontOptions {
 impl Default for FontOptions {
     fn default() -> Self {
         Self {
-            families: vec!["BigBlueTerm437 Nerd Font Mono".into(), "Cascadia Mono".into(), "Consolas".into(), "Courier New".into()],
+            // Keep in step with the guifont in bridge/init.lua. Windows faces, then the Linux ones.
+            families: ["BigBlueTerm437 Nerd Font Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", "Liberation Mono", "Noto Sans Mono", "Courier New"]
+                .map(String::from)
+                .to_vec(),
             size_pt: 9.0,
             width_extra: 0.0,
         }
@@ -158,6 +161,12 @@ impl FontStack {
     pub fn new(options: FontOptions, scale: f32) -> anyhow::Result<Self> {
         let mut db = fontdb::Database::new();
         db.load_system_fonts();
+        // Fonts shipped with a release (the house font) sit in `fonts/` next to the exe.
+        if let Some(dir) = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|d| d.join("fonts"))) {
+            if dir.is_dir() {
+                db.load_fonts_dir(&dir);
+            }
+        }
         #[cfg(windows)]
         if let Ok(local) = std::env::var("LOCALAPPDATA") {
             db.load_fonts_dir(std::path::Path::new(&local).join("Microsoft").join("Windows").join("Fonts"));
@@ -210,11 +219,17 @@ impl FontStack {
         let primary = match primary {
             Some(i) => i,
             None => {
-                // Any monospace face at all.
+                // Any monospace face at all. fontdb's generic Monospace family is Courier New
+                // unless told otherwise, which Linux does not have, so look at the faces' own flag.
                 let query = fontdb::Query { families: &[fontdb::Family::Monospace], ..Default::default() };
-                let id = self.db.query(&query).ok_or_else(|| anyhow::anyhow!("no monospace font installed"))?;
-                let info = self.db.face(id).unwrap();
-                let family = info.families.first().map(|f| f.0.clone()).unwrap_or_default();
+                let family = self
+                    .db
+                    .query(&query)
+                    .and_then(|id| self.db.face(id))
+                    .or_else(|| self.db.faces().find(|f| f.monospaced && f.style == fontdb::Style::Normal && f.weight == fontdb::Weight::NORMAL))
+                    .or_else(|| self.db.faces().find(|f| f.monospaced))
+                    .and_then(|info| info.families.first().map(|f| f.0.clone()))
+                    .ok_or_else(|| anyhow::anyhow!("no monospace font installed"))?;
                 log::warn!("falling back to {family}");
                 self.load_family(&family).ok_or_else(|| anyhow::anyhow!("could not load {family}"))?
             }
@@ -339,6 +354,14 @@ mod tests {
         assert_eq!(o.size_px(2.0), 24.0);
         assert!(FontOptions::parse("").is_none());
         assert!(FontOptions::parse("*").is_none());
+    }
+
+    #[test]
+    fn default_matches_the_bridge_guifont() {
+        let init = include_str!("../bridge/init.lua");
+        let line = init.lines().find(|l| l.starts_with("vim.o.guifont = ")).expect("init.lua sets guifont");
+        let value = line.trim_start_matches("vim.o.guifont = ").trim_matches('"');
+        assert_eq!(FontOptions::parse(value).unwrap(), FontOptions::default());
     }
 
     #[test]

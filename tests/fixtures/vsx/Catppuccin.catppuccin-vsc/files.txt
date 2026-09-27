@@ -1,0 +1,11 @@
+package.json
+icon.png
+readme.md
+LICENSE.txt
+changelog.md
+themes/mocha.json
+themes/macchiato.json
+themes/latte.json
+themes/frappe.json
+dist/main.cjs
+dist/browser.cjs

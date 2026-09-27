@@ -1,0 +1,29 @@
+{
+  "name": "snippets-fixture",
+  "displayName": "nvs.ide snippets fixture",
+  "description": "A synthetic snippets-only extension for tests/verify_vsx.lua: no code, one snippet file.",
+  "version": "1.0.0",
+  "publisher": "nvs",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Snippets"
+  ],
+  "contributes": {
+    "snippets": [
+      {
+        "language": "lua",
+        "path": "./snippets/lua.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "nvsfixture",
+        "scopeName": "source.nvsfixture",
+        "path": "./syntaxes/nvsfixture.tmLanguage.json"
+      }
+    ]
+  }
+}

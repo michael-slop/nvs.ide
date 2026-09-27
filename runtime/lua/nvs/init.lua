@@ -35,6 +35,17 @@ function M.setup()
   state.load()
   stages.apply(state.data.stage)
 
+  -- VS Code extensions from Open VSX (docs/extensions.md): converted themes on the
+  -- runtimepath, filetypes, bundled language servers and the extension host.
+  local vsx_ok, vsx_err = pcall(function()
+    require("nvs.vsx").setup()
+  end)
+  if not vsx_ok then
+    vim.schedule(function()
+      vim.notify("Extensions did not load: " .. tostring(vsx_err), vim.log.levels.WARN, { title = "nvs.ide" })
+    end)
+  end
+
   -- Inside the nvs.ide shell, stream workbench state to it.
   if vim.g.nvs_shell then
     require("nvs.bridge").setup()

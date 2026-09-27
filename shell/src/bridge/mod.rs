@@ -104,6 +104,41 @@ fn strip_verbatim(p: PathBuf) -> PathBuf {
     }
 }
 
+/// A Neovim shipped next to the exe: the zip and the installer put Neovim's own release
+/// layout in `nvim/`, so it is `<exe dir>/nvim/bin/nvim.exe`. `None` from a checkout or an
+/// install without the bundle, where `nvim` on PATH is used.
+pub fn bundled_nvim() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let name = if cfg!(windows) { "nvim.exe" } else { "nvim" };
+    let candidate = exe.parent()?.join("nvim").join("bin").join(name);
+    candidate.is_file().then_some(candidate)
+}
+
+/// The program to start for `nvim_bin`: the default `nvim` prefers the bundled copy, then
+/// PATH; a name or path given with `--nvim-bin` is used exactly as given.
+pub fn resolve_nvim_bin(nvim_bin: &str) -> String {
+    if nvim_bin == "nvim" {
+        if let Some(bundled) = bundled_nvim() {
+            return bundled.to_string_lossy().into_owned();
+        }
+    }
+    nvim_bin.to_string()
+}
+
+/// PATH for the Neovim child with the tools a release ships next to the exe (`rg/`) in
+/// front, so LazyVim's pickers find the same ripgrep the Search view uses. `None` when
+/// nothing is bundled (a checkout), which leaves PATH as it is.
+fn path_with_bundled_tools() -> Option<std::ffi::OsString> {
+    let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+    let rg = dir.join("rg").join(if cfg!(windows) { "rg.exe" } else { "rg" });
+    if !rg.is_file() {
+        return None;
+    }
+    let current = std::env::var_os("PATH").unwrap_or_default();
+    let dirs = std::iter::once(dir.join("rg")).chain(std::env::split_paths(&current));
+    std::env::join_paths(dirs).ok()
+}
+
 /// Neovim's config folder for an app name: `$XDG_CONFIG_HOME/<app>`, else
 /// `%LOCALAPPDATA%\<app>` on Windows or `~/.config/<app>` elsewhere.
 fn config_dir_for(app: &str) -> Option<PathBuf> {
@@ -151,7 +186,11 @@ fn build_command(config: &BridgeConfig) -> Command {
     if let Some(app) = &config.app_name {
         ensure_config_link(app);
     }
-    let mut cmd = Command::new(&config.nvim_bin);
+    let nvim_bin = resolve_nvim_bin(&config.nvim_bin);
+    if nvim_bin != config.nvim_bin {
+        log::info!("using the bundled Neovim at {nvim_bin}");
+    }
+    let mut cmd = Command::new(&nvim_bin);
     cmd.args(&config.nvim_args);
     if !config.nvim_args.iter().any(|a| a == "--embed") {
         cmd.arg("--embed");
@@ -159,6 +198,9 @@ fn build_command(config: &BridgeConfig) -> Command {
     cmd.args(&config.files);
     if let Some(app) = &config.app_name {
         cmd.env("NVIM_APPNAME", app);
+    }
+    if let Some(path) = path_with_bundled_tools() {
+        cmd.env("PATH", path);
     }
     if let Some(cwd) = &config.cwd {
         cmd.current_dir(cwd);
@@ -277,5 +319,20 @@ impl Drop for Bridge {
         if let Some(rt) = self.runtime.take() {
             rt.shutdown_timeout(Duration::from_millis(500));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn explicit_nvim_bin_is_used_as_given() {
+        // Only the default name looks for a bundled copy; a path or another name passes through.
+        assert_eq!(resolve_nvim_bin(r"C:\tools\nvim.exe"), r"C:\tools\nvim.exe");
+        assert_eq!(resolve_nvim_bin("nvim-qt"), "nvim-qt");
+        // From a test binary there is no nvim/bin next to the exe.
+        assert!(bundled_nvim().is_none());
+        assert_eq!(resolve_nvim_bin("nvim"), "nvim");
     }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "nvs-exthost",
+  "private": true,
+  "type": "commonjs",
+  "description": "nvs.ide's extension host: loads one VS Code extension with a vscode shim and speaks LSP to Neovim over stdio",
+  "engines": {
+    "node": ">=18.19"
+  }
+}

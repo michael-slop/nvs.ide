@@ -1,0 +1,10 @@
+{
+  "name": "gated",
+  "displayName": "Gated test extension",
+  "description": "Its activate awaits workspace/applyEdit, a request the client may answer only after initialized; the host must answer initialize at once instead of waiting out its timeout.",
+  "version": "1.0.0",
+  "publisher": "nvs",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": ["*"]
+}

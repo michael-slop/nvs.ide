@@ -1,0 +1,20 @@
+#!/bin/sh
+# nvs: start nvs.ide (the native window around Neovim + LazyVim) from any folder.
+#   nvs                 open the current folder
+#   nvs file.txt        open a file
+#   nvs --help          every option
+# The window is detached from the terminal, the way `start` does it on Windows; --help and
+# --version print here instead. install.sh links this script into ~/.local/bin.
+here=$(dirname "$(readlink -f "$0")")
+exe="$here/nvs-ide"
+if [ ! -x "$exe" ]; then
+  echo "nvs-ide is missing next to $(readlink -f "$0")" >&2
+  exit 1
+fi
+for arg in "$@"; do
+  case "$arg" in
+    --help|-h|--version|-V) exec "$exe" "$@" ;;
+    --) break ;;
+  esac
+done
+nohup "$exe" "$@" >/dev/null 2>&1 &

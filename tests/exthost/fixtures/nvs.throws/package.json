@@ -1,0 +1,10 @@
+{
+  "name": "throws",
+  "displayName": "Throwing test extension",
+  "description": "Its activate throws; the host must log it and answer initialize with no capabilities.",
+  "version": "1.0.0",
+  "publisher": "nvs",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": ["*"]
+}

@@ -44,8 +44,20 @@ pub enum TaskResult {
     Files { cwd: PathBuf, files: Vec<String> },
 }
 
+/// A tool shipped next to the exe: the zip and the installer put ripgrep in `rg/`, so it is
+/// `<exe dir>/rg/rg.exe`. `None` means the tool comes from PATH, as it does from a checkout.
+fn bundled(program: &str) -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let name = if cfg!(windows) { format!("{program}.exe") } else { program.to_string() };
+    let candidate = exe.parent()?.join(program).join(name);
+    candidate.is_file().then_some(candidate)
+}
+
 fn command(program: &str, cwd: &PathBuf) -> Command {
-    let mut cmd = Command::new(program);
+    let mut cmd = match bundled(program) {
+        Some(path) => Command::new(path),
+        None => Command::new(program),
+    };
     cmd.current_dir(cwd);
     #[cfg(windows)]
     {
@@ -220,5 +232,13 @@ mod tests {
         let (b, _) = fuzzy("nvsask", "nvs/x/y/z/ask").unwrap();
         assert!(a < b);
         assert!(fuzzy("zzz", "abc").is_none());
+    }
+
+    #[test]
+    fn tools_come_from_path_unless_bundled_next_to_the_exe() {
+        // A test binary has no rg/rg.exe beside it, so the plain name (PATH lookup) is used.
+        assert!(bundled("rg").is_none());
+        assert!(bundled("no-such-tool").is_none());
+        assert_eq!(command("rg", &std::env::temp_dir()).get_program(), "rg");
     }
 }

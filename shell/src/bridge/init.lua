@@ -12,7 +12,7 @@ vim.o.termguicolors = true
 -- The house font as the default. This runs before the user's config, which may still
 -- override 'guifont'. Without it Neovim's own default (Cascadia/Consolas) would win.
 -- :h9 is 12 px at 96 dpi, the size the pixel font is drawn for.
-vim.o.guifont = "BigBlueTerm437 Nerd Font Mono:h9,Cascadia Mono:h9,Consolas:h9,Courier New:h9"
+vim.o.guifont = "BigBlueTerm437 Nerd Font Mono:h9,Cascadia Mono:h9,Consolas:h9,DejaVu Sans Mono:h9,Liberation Mono:h9,Noto Sans Mono:h9,Courier New:h9"
 
 -- A default window title unless the user set one.
 local title_info = vim.api.nvim_get_option_info2("title", {})

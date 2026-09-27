@@ -82,6 +82,12 @@ try {
   $lines = @()
   if ($Only -ne 'ui') {
     $lines += (& nvim --headless -c 'luafile tests/verify.lua' 2> $errFile | Out-String) -split "`r?`n"
+    # Startup-style checks for the extension system, themes and health, when present.
+    foreach ($extra in 'tests/verify_vsx.lua', 'tests/verify_theme.lua', 'tests/verify_health.lua') {
+      if (Test-Path $extra) {
+        $lines += (& nvim --headless -c "luafile $extra" 2>> $errFile | Out-String) -split "`r?`n"
+      }
+    }
   }
   if ($Only -ne 'core') {
     $lines += (& nvim --headless --cmd 'let g:nvs_test_ui = 1' -c $uiEntry 2>> $errFile | Out-String) -split "`r?`n"
