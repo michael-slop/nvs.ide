@@ -18,14 +18,30 @@ vim.o.guifont = "BigBlueTerm437 Nerd Font Mono:h9,Cascadia Mono:h9,Consolas:h9,D
 -- copy and paste work without wl-copy, xclip or xsel installed. This runs before the
 -- user's config, where setting g:clipboard replaces it. As in Neovide's init.lua.
 if serve_clipboard then
+  -- A refused copy or paste (Wayland refuses a copy before the window has had any input)
+  -- says so plainly and pastes nothing, instead of Neovim's "provider returned invalid data".
+  local function refused(err)
+    local reason = tostring(err):match("[^\n]*$")
+    vim.schedule(function()
+      vim.notify("Clipboard: " .. reason, vim.log.levels.WARN)
+    end)
+  end
   local function copy(register)
     return function(lines)
-      vim.rpcrequest(channel, "nvs.set_clipboard", lines, register)
+      local ok, err = pcall(vim.rpcrequest, channel, "nvs.set_clipboard", lines, register)
+      if not ok then
+        refused(err)
+      end
     end
   end
   local function paste(register)
     return function()
-      return vim.rpcrequest(channel, "nvs.get_clipboard", register)
+      local ok, result = pcall(vim.rpcrequest, channel, "nvs.get_clipboard", register)
+      if ok then
+        return result
+      end
+      refused(result)
+      return { { "" }, "v" }
     end
   end
   vim.g.clipboard = {
