@@ -95,6 +95,14 @@ function M.check()
   tool("C compiler", { "gcc", "clang", "cl", "zig", "cc" }, "syntax parsers are compiled with it", install("BrechtSanders.WinLibs.POSIX.UCRT", "sudo apt install build-essential, or sudo pacman -S base-devel"), "warn")
   tool("curl", { "curl" }, "models, extensions and language servers are downloaded with it", WINDOWS and "Windows 10 and newer ship it" or "sudo apt install curl, or sudo pacman -S curl", "warn")
   tool("node", { "node" }, "VS Code extensions need it: the extension host and bundled language servers run in Node", install("OpenJS.NodeJS.LTS", "sudo apt install nodejs, or sudo pacman -S nodejs (18 or newer)"), "warn")
+  if not WINDOWS and vim.fn.has("mac") == 0 then
+    local clip = vim.g.clipboard
+    if type(clip) == "table" and clip.name == "nvs-ide" then
+      health.ok("clipboard: served by the nvs.ide window (no wl-copy or xclip needed)")
+    else
+      tool("clipboard tool", { "wl-copy", "xclip", "xsel" }, "outside the window, copy and paste reach the system clipboard through one of these", "sudo apt install wl-clipboard xclip, or sudo pacman -S wl-clipboard xclip", "warn")
+    end
+  end
   tool("lazygit", { "lazygit" }, "Space g g opens it", install("JesseDuffield.lazygit", "sudo pacman -S lazygit, or a release from github.com/jesseduffield/lazygit"), "info")
   -- llama-server honours :NvsAI server <path>, so ask ai.lua first and PATH second.
   local ok_ai, server = pcall(function()

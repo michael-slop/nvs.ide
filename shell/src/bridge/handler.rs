@@ -10,10 +10,17 @@ use nvim_rs::{Handler, Neovim};
 use rmpv::Value;
 
 use super::{events::parse_redraw_event, session::NeovimWriter, BridgeSink, RedrawEvent};
+use crate::clipboard::SharedClipboard;
 
 #[derive(Clone)]
 pub struct NeovimHandler<S: BridgeSink> {
     pub sink: S,
+    /// Answers `nvs.get_clipboard` / `nvs.set_clipboard` when the window serves the clipboard.
+    pub clipboard: Option<SharedClipboard>,
+}
+
+fn register(args: &[Value], i: usize) -> String {
+    args.get(i).and_then(Value::as_str).unwrap_or("+").to_string()
 }
 
 #[async_trait]
@@ -29,6 +36,27 @@ impl<S: BridgeSink> Handler for NeovimHandler<S> {
                 Ok(Value::Nil)
             }
             "nvs.ping" => Ok(Value::from("pong")),
+            // Clipboard calls can wait on the display server, so they run off the async
+            // workers. Neovim blocks on the reply either way.
+            "nvs.get_clipboard" | "nvs.set_clipboard" => {
+                let Some(clipboard) = self.clipboard.clone() else {
+                    return Err(Value::from("the window is not serving the clipboard"));
+                };
+                let result = tokio::task::spawn_blocking(move || {
+                    if name == "nvs.get_clipboard" {
+                        clipboard.get(&register(&args, 0))
+                    } else {
+                        let lines = args.first().cloned().unwrap_or(Value::Nil);
+                        clipboard.set(&lines, &register(&args, 1)).map(|()| Value::Nil)
+                    }
+                })
+                .await
+                .map_err(|e| Value::from(e.to_string()))?;
+                result.map_err(|e| {
+                    log::warn!("clipboard: {e}");
+                    Value::from(e)
+                })
+            }
             _ => Err(Value::from(format!("unknown request {name}"))),
         }
     }

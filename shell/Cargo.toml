@@ -35,9 +35,13 @@ lru = "0.16"
 parking_lot = "0.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-arboard = "3"
 image = { version = "0.25", default-features = false, features = ["png"] }
 walkdir = "2"
+
+# The window serves Neovim's clipboard on Linux (src/clipboard.rs); Alacritty's crate, as
+# Neovide uses. Its Wayland support loads libwayland at run time, like winit.
+[target.'cfg(target_os = "linux")'.dependencies]
+copypasta = "0.10.2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.60", features = ["Win32_System_Console", "Win32_Foundation"] }

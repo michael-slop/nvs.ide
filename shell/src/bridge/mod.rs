@@ -27,6 +27,8 @@ pub use session::{NeovimSession, NeovimWriter};
 
 use handler::NeovimHandler;
 
+use crate::clipboard::SharedClipboard;
+
 const NEOVIM_REQUIRED_VERSION: (u64, u64, u64) = (0, 10, 0);
 const INIT_LUA: &str = include_str!("init.lua");
 
@@ -53,6 +55,8 @@ pub struct BridgeConfig {
     pub grid: (u32, u32),
     pub ext_tabline: bool,
     pub client_version: (u64, u64, u64),
+    /// The display's clipboard, which the window serves to Neovim (Linux; see clipboard.rs).
+    pub clipboard: Option<SharedClipboard>,
 }
 
 impl Default for BridgeConfig {
@@ -66,6 +70,7 @@ impl Default for BridgeConfig {
             grid: (100, 40),
             ext_tabline: false,
             client_version: (0, 1, 0),
+            clipboard: None,
         }
     }
 }
@@ -215,7 +220,7 @@ fn build_command(config: &BridgeConfig) -> Command {
 }
 
 async fn attach<S: BridgeSink>(config: &BridgeConfig, sink: S) -> Result<(NeovimSession, ApiInfo, CommandSender)> {
-    let handler = NeovimHandler { sink };
+    let handler = NeovimHandler { sink, clipboard: config.clipboard.clone() };
     let session = NeovimSession::spawn(build_command(config), handler)
         .await
         .context("could not start Neovim; is nvim on PATH?")?;
@@ -244,7 +249,8 @@ async fn attach<S: BridgeSink>(config: &BridgeConfig, sink: S) -> Result<(Neovim
     )
     .await
     .context("set_client_info failed")?;
-    nvim.exec_lua(INIT_LUA, vec![Value::from(info.channel)]).await.context("shell init.lua failed")?;
+    let serve_clipboard = config.clipboard.is_some();
+    nvim.exec_lua(INIT_LUA, vec![Value::from(info.channel), Value::from(serve_clipboard)]).await.context("shell init.lua failed")?;
 
     let (tx, rx) = unbounded_channel();
     commands::start_command_handler(nvim.clone(), rx);

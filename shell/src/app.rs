@@ -25,6 +25,7 @@ use winit::{
 };
 
 use crate::bridge::{Bridge, BridgeConfig, BridgeSink, EditorMode, ParallelCommand, RedrawEvent, SerialCommand};
+use crate::clipboard::SharedClipboard;
 use crate::color::Rgba;
 use crate::editor::{start_editor_thread, EditorNotice, Frame, FrameSink};
 use crate::font::{shaper::Shaper, FontOptions, FontStack};
@@ -768,6 +769,7 @@ impl ApplicationHandler<UserEvent> for App {
         let grid_rect = self.relayout();
         self.grid_size = self.grid_for(grid_rect);
         let editor_tx = start_editor_thread(EditorToApp { proxy: self.proxy.clone() });
+        self.config.bridge.clipboard = SharedClipboard::open(event_loop);
         if let Err(e) = self.start_bridge(editor_tx) {
             log::error!("{e:#}");
             eprintln!("nvs.ide: {e:#}");
@@ -984,6 +986,10 @@ impl ApplicationHandler<UserEvent> for App {
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
         if let Some(bridge) = self.bridge.take() {
             bridge.shutdown(Duration::from_millis(500));
+        }
+        // Before the event loop closes the display the Wayland clipboard runs on.
+        if let Some(clipboard) = self.config.bridge.clipboard.take() {
+            clipboard.close();
         }
     }
 }

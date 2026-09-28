@@ -13,6 +13,7 @@
 
 pub mod app;
 pub mod bridge;
+pub mod clipboard;
 pub mod color;
 pub mod editor;
 pub mod font;

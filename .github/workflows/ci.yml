@@ -88,7 +88,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth mesa-vulkan-drivers libvulkan1 libegl1 libgl1-mesa-dri \
-            libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libxkbcommon0 libxkbcommon-x11-0 unzip
+            libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libxkbcommon0 libxkbcommon-x11-0 unzip \
+            xclip weston libwayland-client0 libwayland-cursor0 libwayland-egl1 desktop-file-utils
 
       - name: Neovim (the release tarball, checked against its pinned sha256)
         run: |
@@ -135,10 +136,97 @@ jobs:
             shell/target/release/nvs-ide --startuptime --screenshot "$RUNNER_TEMP/nvs-ide-linux.png"
           python3 tests/screenshot_check.py "$RUNNER_TEMP/nvs-ide-linux.png"
 
-      - name: Keep the screenshot
+      # The window serves Neovim's clipboard (shell/src/clipboard.rs). The probe runs inside
+      # it: Neovim must pick the window's provider, a copy must read back, xclip must see
+      # what the window copied, and the window must see what xclip copied.
+      - name: Clipboard served by the window (X11)
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/nvs-sb/config
+          XDG_DATA_HOME: ${{ runner.temp }}/nvs-sb/data
+          XDG_STATE_HOME: ${{ runner.temp }}/nvs-sb/state
+          XDG_CACHE_HOME: ${{ runner.temp }}/nvs-sb/cache
+          NVS_TEST: '1'
+          NVS_PROBE_OUT: ${{ runner.temp }}/clipboard-x11.txt
+        run: |
+          timeout 180 xvfb-run -a -s "-screen 0 1920x1080x24" \
+            shell/target/release/nvs-ide --send ':luafile tests/clipboard_probe.lua<CR>' --screenshot "$RUNNER_TEMP/nvs-ide-clipboard.png"
+          cat "$NVS_PROBE_OUT"
+          grep -qx 'provider=nvs-ide' "$NVS_PROBE_OUT"
+          grep -qx 'roundtrip=nvs clipboard round trip' "$NVS_PROBE_OUT"
+          grep -qx 'xclip_sees=nvs clipboard round trip' "$NVS_PROBE_OUT"
+          grep -qx 'window_sees=copied by xclip' "$NVS_PROBE_OUT"
+
+      # Wayland, under a headless Weston: the window must start as a native Wayland client
+      # (no DISPLAY, so no XWayland to fall back on), open the Wayland clipboard through its
+      # own connection, and draw a real frame.
+      - name: Wayland (headless Weston)
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/nvs-sb/config
+          XDG_DATA_HOME: ${{ runner.temp }}/nvs-sb/data
+          XDG_STATE_HOME: ${{ runner.temp }}/nvs-sb/state
+          XDG_CACHE_HOME: ${{ runner.temp }}/nvs-sb/cache
+          NVS_TEST: '1'
+          NVS_PROBE_OUT: ${{ runner.temp }}/clipboard-wayland.txt
+        run: |
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg-runtime"
+          mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless --socket=wayland-nvs --idle-time=0 > "$RUNNER_TEMP/weston.log" 2>&1 &
+          for i in $(seq 1 50); do [ -S "$XDG_RUNTIME_DIR/wayland-nvs" ] && break; sleep 0.2; done
+          [ -S "$XDG_RUNTIME_DIR/wayland-nvs" ] || { cat "$RUNNER_TEMP/weston.log"; exit 1; }
+          env -u DISPLAY WAYLAND_DISPLAY=wayland-nvs timeout 180 \
+            shell/target/release/nvs-ide --send ':luafile tests/clipboard_probe.lua<CR>' \
+            --screenshot "$RUNNER_TEMP/nvs-ide-wayland.png" 2>&1 | tee "$RUNNER_TEMP/wayland.log"
+          python3 tests/screenshot_check.py "$RUNNER_TEMP/nvs-ide-wayland.png"
+          grep -q 'clipboard: Wayland' "$RUNNER_TEMP/wayland.log"
+          cat "$NVS_PROBE_OUT"
+          grep -qx 'provider=nvs-ide' "$NVS_PROBE_OUT"
+          # A headless compositor has no keyboard focus to grant a selection, so a Wayland
+          # round trip is reported here, not required; a desktop session is the real test.
+          grep -x 'roundtrip=.*' "$NVS_PROBE_OUT" || true
+
+      # What a user downloads: the tarball from scripts/package.sh, unpacked into a folder
+      # with a space and an & in its name, installed with install.sh into a throwaway HOME,
+      # started from there (it must find its bundled Neovim and the house font next to
+      # itself), then uninstalled, which must leave nothing behind.
+      - name: Package, install, start and uninstall (the user's path)
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/nvs-sb/config
+          XDG_DATA_HOME: ${{ runner.temp }}/nvs-sb/data
+          XDG_STATE_HOME: ${{ runner.temp }}/nvs-sb/state
+          XDG_CACHE_HOME: ${{ runner.temp }}/nvs-sb/cache
+          NVS_TEST: '1'
+        run: |
+          bash scripts/package.sh 0.0.0-ci --no-build
+          fake="$RUNNER_TEMP/home"
+          dir="$RUNNER_TEMP/apps & more"
+          mkdir -p "$fake" "$dir"
+          tar -xzf dist/nvs.ide-0.0.0-ci-linux-x86_64.tar.gz -C "$dir"
+          app="$dir/nvs.ide"
+          # install.sh's own paths come from HOME, not the sandbox's XDG_DATA_HOME.
+          env -u XDG_DATA_HOME HOME="$fake" sh "$app/install.sh"
+          test "$(readlink -f "$fake/.local/bin/nvs")" = "$app/nvs"
+          test "$(readlink -f "$fake/.local/bin/nvs-ide")" = "$app/nvs-ide"
+          desktop-file-validate "$fake/.local/share/applications/nvs-ide.desktop"
+          grep -qxF "Exec=\"$app/nvs-ide\" %F" "$fake/.local/share/applications/nvs-ide.desktop"
+          test -f "$fake/.local/share/icons/hicolor/64x64/apps/nvs-ide.png"
+          HOME="$fake" "$fake/.local/bin/nvs" --version | tee "$RUNNER_TEMP/version.txt"
+          grep -qF "$app/nvim/bin/nvim (bundled)" "$RUNNER_TEMP/version.txt"
+          timeout 180 xvfb-run -a -s "-screen 0 1920x1080x24" \
+            "$fake/.local/bin/nvs-ide" --screenshot "$RUNNER_TEMP/nvs-ide-installed.png" 2>&1 | tee "$RUNNER_TEMP/installed.log"
+          grep -q 'primary font: BigBlueTerm437 Nerd Font Mono' "$RUNNER_TEMP/installed.log"
+          grep -q 'using the bundled Neovim' "$RUNNER_TEMP/installed.log"
+          python3 tests/screenshot_check.py "$RUNNER_TEMP/nvs-ide-installed.png"
+          env -u XDG_DATA_HOME HOME="$fake" sh "$app/install.sh" --uninstall
+          # update-desktop-database leaves its regenerated mimeinfo.cache; that is the
+          # desktop's index, not a file of ours.
+          left=$(find "$fake/.local" \( -type f -o -type l \) ! -name '*.cache' | wc -l)
+          echo "left behind: $left"
+          test "$left" -eq 0
+
+      - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: nvs-ide-linux-screenshot
-          path: ${{ runner.temp }}/nvs-ide-linux.png
+          name: nvs-ide-linux-screenshots
+          path: ${{ runner.temp }}/nvs-ide-*.png
           if-no-files-found: ignore
