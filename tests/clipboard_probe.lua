@@ -8,9 +8,18 @@ local function add(key, value)
   out[#out + 1] = key .. "=" .. vim.trim(tostring(value))
 end
 
+-- A refused copy raises (Wayland refuses one without a seat event, as under a headless
+-- compositor); record it and keep going, so the file is always written.
+local function try(key, fn)
+  local ok, value = pcall(fn)
+  add(ok and key or (key .. "_error"), ok and value or tostring(value):gsub("\n", " "))
+end
+
 add("provider", vim.fn["provider#clipboard#Executable"]())
-vim.fn.setreg("+", "nvs clipboard round trip")
-add("roundtrip", vim.fn.getreg("+"))
+try("roundtrip", function()
+  vim.fn.setreg("+", "nvs clipboard round trip")
+  return vim.fn.getreg("+")
+end)
 
 local x11 = (vim.env.WAYLAND_DISPLAY or "") == "" and (vim.env.DISPLAY or "") ~= ""
 if x11 and vim.fn.executable("xclip") == 1 then

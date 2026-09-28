@@ -182,7 +182,7 @@ jobs:
           grep -qx 'provider=nvs-ide' "$NVS_PROBE_OUT"
           # A headless compositor has no keyboard focus to grant a selection, so a Wayland
           # round trip is reported here, not required; a desktop session is the real test.
-          grep -x 'roundtrip=.*' "$NVS_PROBE_OUT" || true
+          grep -E '^roundtrip(_error)?=' "$NVS_PROBE_OUT"
 
       # What a user downloads: the tarball from scripts/package.sh, unpacked into a folder
       # with a space and an & in its name, installed with install.sh into a throwaway HOME,
